@@ -1,8 +1,8 @@
 module.exports = {
   target: 'serverless',
   images: {
-    loader: 'imgix',
-    path: '/',
+    loader: 'akamai',
+    path: '',
   },
   webpack: function (config) {
     config.module.rules.push({
