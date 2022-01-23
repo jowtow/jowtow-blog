@@ -1,0 +1,23 @@
+.header{
+    margin: 15px 10vw;
+    padding: 5px;
+    border-bottom: 1px solid var(--color-primary);
+}
+
+.headerLink {
+    margin: 20px;
+}
+
+.wordBlog{
+    color: var(--color-primary)
+}
+
+.jowtowdev{
+    color: var(--color-secondary);
+}
+
+@media screen and (max-width: 800px){
+    .header{
+        margin: 15px;
+    }
+}

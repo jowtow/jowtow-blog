@@ -1,4 +1,4 @@
-
+import styles from './PostList.module.css'
 import Link from 'next/link'
 
 export default function PostList({ posts }) {
@@ -13,7 +13,7 @@ export default function PostList({ posts }) {
             return (
               <li key={post.slug}>
                 <Link href={`/post/${post.slug}`}>
-                  <a>{post.frontmatter.title}</a>
+                  <a className={styles.postLink}>{post.frontmatter.title}</a>
                 </Link>
               </li>
             )

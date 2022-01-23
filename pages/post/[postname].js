@@ -1,24 +1,29 @@
 import Link from 'next/link'
 import matter from 'gray-matter'
 import ReactMarkdown from 'react-markdown'
-
+import Author from '../../components/Author'
 import Layout from '../../components/Layout'
+import styles from './[postname].module.css'
 
 export default function BlogPost({ siteTitle, frontmatter, markdownBody }) {
   if (!frontmatter) return <></>
 
   return (
       <Layout pageTitle={`${siteTitle} | ${frontmatter.title}`}>
-        <Link href="/">
-          <a>Back to post list</a>
-        </Link>
-        <article>
-          <h1>{frontmatter.title}</h1>
-          <p>By {frontmatter.author}</p>
-          <div>
+        <article className={styles.post}>
+          <h1 className={styles.postTitle}>{frontmatter.title}</h1>
+          <p className={styles.postAuthor}>by {frontmatter.author}</p>
+          <p className={styles.postDate}>{frontmatter.date}</p>
+          <div className={styles.postBody}>
             <ReactMarkdown>{markdownBody}</ReactMarkdown>
           </div>
         </article>
+        <Author></Author>
+        <Link href="/">
+          <a className={styles.more}>
+            ←_← more posts!
+          </a>
+        </Link>
       </Layout>
   )
 }

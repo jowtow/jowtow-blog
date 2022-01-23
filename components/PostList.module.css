@@ -1,0 +1,4 @@
+.postLink{
+    color: var(--color-primary);
+    text-decoration: underline;
+}

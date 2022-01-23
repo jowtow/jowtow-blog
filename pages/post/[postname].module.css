@@ -1,0 +1,35 @@
+
+.post{
+    margin: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+.postTitle{
+    text-align: center;
+    color: var(--color-primary);
+    margin: 0px;
+    font-size: 1.3rem;
+}
+
+.postAuthor{
+    text-align: center;
+    color: var(--color-secondary);
+    margin: 0px;
+}
+
+.postDate{
+    text-align: center;
+    margin: 0px;
+    font-style: italic;
+    font-size: 0.8rem;
+}
+.postBody{
+    padding: 0px 5vw;
+}
+
+.more{
+    text-decoration: underline;
+}

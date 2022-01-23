@@ -1,0 +1,27 @@
+.author{
+    margin: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 2px solid var(--color-primary);
+    display:flex;
+    flex-direction: row;
+}
+
+.authorDescription > div{
+    margin: 10px;
+}
+
+.authorImage{
+    max-width: 150px;
+    max-height: 150px;
+    height: 100px;
+    border-radius: 100%;
+}
+.authorIntro{
+    font-size: 1.2rem;
+
+}
+
+.authorIntroCont{
+    font-size: 1rem;
+}

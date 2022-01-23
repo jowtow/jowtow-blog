@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Header from './Header'
+import styles from './Layout.module.css'
 
 export default function Layout({ children, pageTitle, ...props }) {
   return (
@@ -10,9 +11,9 @@ export default function Layout({ children, pageTitle, ...props }) {
       </Head>
       <section className="layout">
         <Header />
-        <div className="content">{children}</div>
+        <div className={styles.content}>{children}</div>
       </section>
-      <footer>Built by me!</footer>
+      {/* <footer>Built by me!</footer> */}
     </>
   )
 }
