@@ -11,4 +11,4 @@ These words couldn't care less what plans you had, they are more concerned with 
 - Bologna: while some folks may enjoy this mystery meat, many despise it for it's spongey quality and overall terrible name. Italy rarely does wrong, but they messed up this time
 - Slit: this word is so sharp it could bisect a sheet of loose leaf paper. Don't ever use it unless you are in a dire situation.
 
-... more to come.S
+... more to come.
