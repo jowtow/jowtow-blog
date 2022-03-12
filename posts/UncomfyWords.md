@@ -8,7 +8,7 @@ There are some words that simply don't sound comfy. I'm talking about those word
 
 These words couldn't care less what plans you had, they are more concerned with what havoc they can wreak on society. Take a gander below:
 ### _Moist_
-This is an understatement regarding your favorite argile socks.
+This is an understatement regarding your favorite argyle socks.
 
 ### _Bologna_
 While some folks may enjoy this mystery meat, many despise it for it's spongey quality and overall terrible name. Italy rarely does wrong, but they messed up this time
