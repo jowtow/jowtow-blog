@@ -1,4 +1,7 @@
 {
-    "title": "Demo Blog",
-    "description": "This is a simple blog built with Next, easily deployable to Netlify!"
+    "title": "John Townsend''s Blog",
+    "description": "I'm a not-so-ordinary guy from the southeast corner of South Dakota. I am on a constant journey of curiosity and learning so hop aboard the blog train and let's partake in some tomfoolery!",
+    "professionalDescription": "My main profession and passion is Software Engineering. I attended Dakota State University and received my Bachelors Degree in Computer Science and Mathematics in the Spring of 2019.",
+    "music": "Singing, dancing, and all other mediums of experiencing music are some of my favorite pass-times. You can often find me jamming to a capella metal or future bass. I was classically trained to sing Italian arias and such, but you can also find me doing my best Jack Black, Tenacious D style.",
+    "crafts": "I am a sporadic partaker in the painting of rocks. A few years ago, my wife got me started on painting rocks and it's stuck with me ever since. I also love photoshopping pictures of people into scenery in which they don't belong."
 }

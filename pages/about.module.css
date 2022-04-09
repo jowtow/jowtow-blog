@@ -1,0 +1,92 @@
+.authorImage{
+    max-width: 150px;
+    max-height: 150px;
+    height: 150px;
+    border-radius: 100%;
+    border: 3px solid var(--color-primary);
+
+}
+
+.aboutContainer{
+    border-bottom:  2px solid var(--color-primary);
+    padding: 0px 20px;
+}
+
+.author{
+    margin: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    animation: 1s ease-in-out 0s 1 slideInFromLeft,
+                1s ease-in-out 0s 1 opacityIn;
+}
+
+.author > span{
+    margin: 30px;
+    font-size: 50px;
+    /* font-style: italic; */
+}
+.descriptions{
+    margin: 0px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.description{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 600px;
+}
+.description svg{
+    font-size: 50px;
+    color: var(--color-secondary);
+}
+.description p{
+    margin: 20px;
+}
+
+.links{
+    margin: 0px 40px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+}
+.links svg{
+    margin: 10px;
+    color: var(--color-primary);
+}
+
+@keyframes slideInFromLeft {
+    0% {
+      transform: translateY(100%);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+@keyframes opacityIn {
+0% {
+    opacity: 0%;
+    }
+    100% {
+    opacity: 100%;
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .author{
+        flex-direction: column;
+    }
+    .author > span{
+        font-size: 30px;
+    }
+}
