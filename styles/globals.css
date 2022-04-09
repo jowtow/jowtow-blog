@@ -1,7 +1,8 @@
-:root{
-  --solarized-white: rgb(238,232,213);
-  --solarized-black: rgb(7,54,66);
+:root {
+  --solarized-white: rgb(238, 232, 213);
+  --solarized-black: rgb(7, 54, 66);
   --color-dark: #1f1f1f;
+  --color-lessdark: #2c2c2c;
   --color-secondary: rgb(255, 198, 252);
   --color-primary: rgb(32, 218, 125);
 }

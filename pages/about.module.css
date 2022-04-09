@@ -20,7 +20,7 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    animation: 1s ease-in-out 0s 1 slideInFromLeft,
+    animation: 1s ease-in-out 0s 1 slideInFromBottom,
                 1s ease-in-out 0s 1 opacityIn;
 }
 
@@ -65,22 +65,7 @@
     color: var(--color-primary);
 }
 
-@keyframes slideInFromLeft {
-    0% {
-      transform: translateY(100%);
-    }
-    100% {
-      transform: translateY(0);
-    }
-  }
-@keyframes opacityIn {
-0% {
-    opacity: 0%;
-    }
-    100% {
-    opacity: 100%;
-    }
-}
+
 
 @media screen and (max-width: 800px) {
     .author{
@@ -90,3 +75,24 @@
         font-size: 30px;
     }
 }
+
+
+@keyframes slideInFromBottom {
+    0% {
+      transform: translateY(100%);
+    }
+  
+    100% {
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes opacityIn {
+    0% {
+      opacity: 0%;
+    }
+  
+    100% {
+      opacity: 100%;
+    }
+  }

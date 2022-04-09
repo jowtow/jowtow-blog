@@ -28,8 +28,24 @@
 }
 .postBody{
     padding: 0px 5vw;
+    display: flex;
+    flex-direction: column;
+    /* align-items: center; */
 }
 
 .more{
     text-decoration: underline;
+}
+
+.postBody h3{
+    text-align: left;
+}
+
+.postBody img {
+    max-height: 30vh;
+    border-radius: 10px;
+    border: 2px solid var(--color-secondary);
+    text-align: center;
+    display: block;
+    margin: 0 auto;
 }

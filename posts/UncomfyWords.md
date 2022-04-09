@@ -1,5 +1,6 @@
 ---
 title: 'Uncomfy Words'
+image: 'thumbnails/uncomfyWords.jpg'
 author: 'John Townsend'
 date: '2022-01-25'
 ---
