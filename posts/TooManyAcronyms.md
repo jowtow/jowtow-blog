@@ -2,7 +2,7 @@
 title: 'Too Many Acronyms'
 image: 'thumbnails/TooManyAcronyms.jpg'
 author: 'John Townsend'
-date: '2022-04-22'
+date: '2022-09-24'
 ---
 
 Too Long Did not Read (TLDR): Acronyms are getting out of hand and we need to do something about it.
