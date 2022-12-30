@@ -40,7 +40,7 @@ export async function getStaticProps() {
 
   return {
     props: {
-      posts,
+      posts: posts.sort((a, b) => (Date.parse(a.frontmatter.date) < Date.parse(b.frontmatter.date)) ? 1 : -1),
       title: configData.default.title,
       description: configData.default.description,
     },

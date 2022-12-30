@@ -10,7 +10,6 @@ export default function PostList({ posts }) {
       <div className={styles.postsContainer}>
         {posts &&
           posts.map((post) => {
-            console.log(post.frontmatter)
             return (
               <div key={post.slug} className={styles.postContainer}>
                 <Link href={`/post/${post.slug}`}>
