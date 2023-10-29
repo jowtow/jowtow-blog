@@ -8,6 +8,9 @@ date: '2023-10-29'
 Ah, the age old question:
 > Is a hotdog a sandwich?
 
+
+![John Sandwich](/thumbnails/HotdogSandwich.png)
+
 Those who have partook in the wild world of glizzy classification surely know what a beast this question is. The controversy sparked herein has been known to drive friends apart, split atoms, and break brotherly bonds. This question should be relegated to the underworld and henceforth not discussed unless all peace and sanctity be defiled. When pondering whether you should discuss this question with loved ones, coworkers, and others with whom you'd like to remain in acquaintance; take heed. Add this topic to the list of politics and religion... think twice.
 
 Nevertheless, we desire a definitive answer. This question and  others like "Is water wet?" make even full-grown adults feel like imbeciles. We must rise above the folly of such questions. You've come to the right place, I have the answers. Read on.
