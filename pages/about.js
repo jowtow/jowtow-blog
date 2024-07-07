@@ -38,7 +38,7 @@ const About = ({ title, description, professionalDescription, music, crafts,  ..
             </div>
           </div>
           <div className={styles.links}>
-            <a href="https://github.com/JohnWTownsend" target="_blank" rel="noreferrer"><FontAwesomeIcon icon={faGithub} /></a>
+            <a href="https://github.com/jowtow" target="_blank" rel="noreferrer"><FontAwesomeIcon icon={faGithub} /></a>
             <a href="https://stackoverflow.com/users/8167458/john-townsend" target="_blank" rel="noreferrer"><FontAwesomeIcon icon={faStackOverflow} /></a>
             <a href="https://www.linkedin.com/in/johntownsend/" target="_blank" rel="noreferrer"><FontAwesomeIcon icon={faLinkedin} /></a>
             <a href="https://www.youtube.com/channel/UCVxiiiRO17Sl95I0cctdfjg" target="_blank" rel="noreferrer"><FontAwesomeIcon icon={faYoutube} /></a>
