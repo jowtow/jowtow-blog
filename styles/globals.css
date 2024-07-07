@@ -1,10 +1,13 @@
 :root {
   --solarized-white: rgb(238, 232, 213);
-  --solarized-black: rgb(22, 138, 80);
+  --text-color-dark: rgb(3, 30, 128);
+  --post-link-background: chartreuse;
   --color-dark: #1f1f1f;
   --color-lessdark: #2c2c2c;
-  --color-secondary: rgb(209, 97, 163);
-  --color-primary: rgb(32, 218, 125);
+  /* --color-secondary: rgb(209, 97, 163); */
+  --color-secondary: fuchsia;/*rgb(130, 111, 255);*/
+  /* --color-primary: rgb(253, 178, 2); */
+  --color-primary: chartreuse;
 }
 
 html,

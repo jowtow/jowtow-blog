@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import Author from '../../components/Author'
 import Layout from '../../components/Layout'
 import styles from './[postname].module.css'
+import remarkGfm from 'remark-gfm'
 
 export default function BlogPost({ siteTitle, frontmatter, markdownBody }) {
   if (!frontmatter) return <></>
@@ -15,7 +16,7 @@ export default function BlogPost({ siteTitle, frontmatter, markdownBody }) {
           <p className={styles.postAuthor}>by {frontmatter.author}</p>
           <p className={styles.postDate}>{frontmatter.date}</p>
           <div className={styles.postBody}>
-            <ReactMarkdown>{markdownBody}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={remarkGfm}>{markdownBody}</ReactMarkdown>
           </div>
         </article>
         <Author></Author>
