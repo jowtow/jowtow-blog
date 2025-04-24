@@ -9,7 +9,7 @@ export default function Music({ title }) {
 
         <p>jowtow also creates music!</p>
         <p>
-          get in touch with jowtow @ <address>johnjohnjdubya@gmail.com</address>
+          Email: <address>johnjohnjdubya@gmail.com</address>
         </p>
 
         <h2 style={{ textAlign: "center" }}>Releases</h2>
