@@ -1,5 +1,5 @@
-import Link from 'next/link'
-import styles from './Header.module.css'
+import Link from "next/link";
+import styles from "./Header.module.css";
 
 export default function Header() {
   return (
@@ -15,12 +15,14 @@ export default function Header() {
           <Link href="/postlist">
             <a className={styles.headerLink}>Posts</a>
           </Link>
+          <Link href="/music">
+            <a className={styles.headerLink}>Music</a>
+          </Link>
           <Link href="/about">
             <a className={styles.headerLink}>About</a>
           </Link>
-
         </nav>
       </header>
     </>
-  )
+  );
 }
