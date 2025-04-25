@@ -7,9 +7,16 @@ export default function Music({ title }) {
       <Layout pageTitle={`jowtow | Music`}>
         <h1>jowtow music</h1>
 
-        <p>jowtow also creates music!</p>
         <p>
-          Email: <address>johnjohnjdubya@gmail.com</address>
+          jowtow is an up and coming musician with an electronic spin on the
+          world. His intensity and tomfoolery know no bounds when it comes to
+          making beats that will make you get on your feet. Check out his music
+          on Spotify or anywhere that you can find music!
+        </p>
+        <p>Full Name: John Townsend</p>
+        <p>
+          Email:{" "}
+          <a href="mailto:johnjohnjdubya@gmail.com">johnjohnjdubya@gmail.com</a>
         </p>
 
         <h2 style={{ textAlign: "center" }}>Releases</h2>
