@@ -1,13 +1,13 @@
 :root {
   --solarized-white: rgb(238, 232, 213);
-  --text-color-dark: rgb(3, 30, 128);
-  --post-link-background: chartreuse;
+  --text-color-dark: rgb(22, 25, 37);
+  --post-link-background: goldenrod;
   --color-dark: #1f1f1f;
   --color-lessdark: #2c2c2c;
   /* --color-secondary: rgb(209, 97, 163); */
-  --color-secondary: fuchsia;/*rgb(130, 111, 255);*/
+  --color-secondary: silver; /*rgb(130, 111, 255);*/
   /* --color-primary: rgb(253, 178, 2); */
-  --color-primary: chartreuse;
+  --color-primary: goldenrod;
 }
 
 html,
