@@ -21,7 +21,8 @@ After a little bit of messing around, I came up with the idea. I will write a fu
 ## Filming
 
 If you are reading this and still haven't seen the music video, you gotta stop right now and go watch it!
-[Golden Music Video](https://youtu.be/twjHrQTQwPs?si=_tEUFoD2R4jYTZzs)
+
+Click here -> [Golden Music Video](https://youtu.be/twjHrQTQwPs?si=_tEUFoD2R4jYTZzs)
 
 Filming took a while, but I had a fantastic film crew and some lovely folks who were willing to help. #1 best film crew member (and only film crew member) is my sweet wife Brooke. She did such a great job filming and was so supportive of me the whole way. We had an absolute blast and I'm pretty sure both of us have decided this won't be the last music video / song we work on together 😤😤😤. We filmed over the course of 3 weekends and it took time, there were various wardrobe changes, certain props that took time to find or otherwise create, and lots of laughs and extra takes along the way.
 
