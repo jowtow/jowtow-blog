@@ -106,7 +106,7 @@ export default function Golden() {
       >
         <div style={{ margin: "20px" }}>
           <Link
-            href="https://open.spotify.com/artist/3DB1cb0YaTkAu6Jb7O0ICW?si=r65g-8vXSD2DC-UrzU6tXw"
+            href="https://open.spotify.com/album/47eWiY7nsZvti8afcJDSOT?si=pgunsNiTTCij9EaCSCYgkg"
             replace={false}
           >
             <a target="blank">

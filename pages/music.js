@@ -12,11 +12,6 @@ export default function Music({ title }) {
         making beats that will make you get on your feet. Check out his music on
         Spotify or anywhere that you can find music!
       </p>
-      <p>Full Name: John Townsend</p>
-      <p>
-        Email:{" "}
-        <a href="mailto:johnjohnjdubya@gmail.com">johnjohnjdubya@gmail.com</a>
-      </p>
 
       <h2 style={{ textAlign: "center" }}>Releases</h2>
       <div style={{ display: "flex", justifyContent: "center" }}>

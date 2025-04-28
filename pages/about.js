@@ -78,7 +78,7 @@ const About = ({
             <FontAwesomeIcon icon={faYoutube} />
           </a>
           <a
-            href="https://open.spotify.com/user/1226496424?si=a0b619d607b9491e"
+            href="https://open.spotify.com/artist/3DB1cb0YaTkAu6Jb7O0ICW?si=11g42F1nS--HbYjr2WX7TA"
             target="_blank"
             rel="noreferrer"
           >
