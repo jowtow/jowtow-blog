@@ -1,7 +1,7 @@
-import CoverArt from "../components/CoverArt/CoverArt";
+import CoverArt from "@/components/CoverArt/CoverArt";
 import Link from "next/link";
 
-export default function Music({ title }) {
+export default function Page() {
   return (
     <>
       <h1>jowtow music</h1>
@@ -15,16 +15,14 @@ export default function Music({ title }) {
 
       <h2 style={{ textAlign: "center" }}>Releases</h2>
       <div style={{ display: "flex", justifyContent: "center" }}>
-        <Link href="/music/golden">
-          <a style={{ width: "fit-content", margin: "10px" }}>
-            <CoverArt
-              img="/coverart/Golden_CoverArt.png"
-              title="Golden"
-              size={300}
-            />
-          </a>
+        <Link href="/music/golden" className="w-fit m-2">
+          <CoverArt
+            img="/coverart/Golden_CoverArt.png"
+            title="Golden"
+            size={300}
+          />
         </Link>
-        <div style={{ width: "fit-content", margin: "10px" }}>
+        <div className="w-fit m-2">
           <CoverArt
             img="/coverart/GetDownToIt_CoverArt.png"
             title="Get Down To It (Sample)"

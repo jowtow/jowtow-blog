@@ -1,5 +1,5 @@
+"use client";
 import React from "react";
-import CoverArt from "../../components/CoverArt/CoverArt";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 import {
@@ -9,10 +9,11 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
+import CoverArt from "@/components/CoverArt/CoverArt";
 
 export default function Golden() {
   const size = 400;
-  const shearRef = React.useRef();
+  const shearRef = React.useRef(null);
   function mouseMove(e) {
     if (!shearRef) return;
 
@@ -44,8 +45,8 @@ export default function Golden() {
   }
 
   React.useEffect(() => {
-    var end = Date.now() + 15 * 1000;
-    var colors = ["#DAA520"];
+    const end = Date.now() + 15 * 1000;
+    const colors = ["#DAA520"];
 
     (function frame() {
       confetti({
@@ -91,7 +92,7 @@ export default function Golden() {
       >
         <CoverArt
           img="/coverart/Golden_CoverArt.png"
-          title={null}
+          title="golden"
           size={size}
         />
       </div>
@@ -108,35 +109,41 @@ export default function Golden() {
           <Link
             href="https://open.spotify.com/album/47eWiY7nsZvti8afcJDSOT?si=pgunsNiTTCij9EaCSCYgkg"
             replace={false}
+            target="blank"
           >
-            <a target="blank">
-              <FontAwesomeIcon
-                icon={faSpotify}
-                fontSize={50}
-                color="goldenrod"
-              />
-            </a>
+            <FontAwesomeIcon
+              icon={faSpotify}
+              fontSize={50}
+              color="goldenrod"
+              className=""
+            />
           </Link>
         </div>
         <div style={{ margin: "20px" }}>
           <Link
             href="https://youtu.be/twjHrQTQwPs?si=oAi7pXhr_bLRpjKw"
             replace={false}
+            target="blank"
           >
-            <a target="blank">
-              <FontAwesomeIcon
-                icon={faYoutube}
-                fontSize={50}
-                color="goldenrod"
-              />
-            </a>
+            <FontAwesomeIcon
+              icon={faYoutube}
+              fontSize={50}
+              color="goldenrod"
+              className=""
+            />
           </Link>
         </div>
         <div style={{ margin: "20px" }}>
-          <Link href="https://music.apple.com/us/artist/jowtow/1808178421">
-            <a target="blank">
-              <FontAwesomeIcon icon={faApple} fontSize={50} color="goldenrod" />
-            </a>
+          <Link
+            href="https://music.apple.com/us/artist/jowtow/1808178421"
+            target="blank"
+          >
+            <FontAwesomeIcon
+              icon={faApple}
+              fontSize={50}
+              color="goldenrod"
+              className=""
+            />
           </Link>
         </div>
       </div>
@@ -144,14 +151,16 @@ export default function Golden() {
         <h2 style={{ textAlign: "center" }}>
           Make sure to check out the music video on YouTube as well
         </h2>
-        <Link href="https://youtu.be/twjHrQTQwPs?si=oAi7pXhr_bLRpjKw">
-          <a target="_blank">
-            <Image
-              src="/coverart/Golden_Thumbnail.png"
-              width={711}
-              height={400}
-            />
-          </a>
+        <Link
+          href="https://youtu.be/twjHrQTQwPs?si=oAi7pXhr_bLRpjKw"
+          target="blank"
+        >
+          <Image
+            alt="golden"
+            src="/coverart/Golden_Thumbnail.png"
+            width={711}
+            height={400}
+          />
         </Link>
       </div>
     </div>

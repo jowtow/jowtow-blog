@@ -1,6 +1,15 @@
+"use client";
 import Image from "next/image";
 
-export default function CoverArt({ img, title, size }) {
+export default function CoverArt({
+  img,
+  title,
+  size,
+}: {
+  img: string;
+  title: string | null;
+  size: number;
+}) {
   return (
     <div
       style={{
@@ -12,7 +21,7 @@ export default function CoverArt({ img, title, size }) {
         width: "fit-content",
       }}
     >
-      <Image src={img} width={size} height={size}></Image>
+      <Image src={img} alt={title} width={size} height={size}></Image>
       {title && <span style={{ margin: "5px" }}>{title}</span>}
     </div>
   );

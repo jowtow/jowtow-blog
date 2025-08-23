@@ -1,6 +1,6 @@
 ---
 title: "About Golden"
-image: "coverart/Golden_Thumbnail.png"
+image: "/coverart/Golden_Thumbnail.png"
 author: "John Townsend"
 date: "2025-04-28"
 ---
