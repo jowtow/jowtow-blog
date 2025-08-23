@@ -21,7 +21,7 @@ export default function CoverArt({
         width: "fit-content",
       }}
     >
-      <Image src={img} alt={title} width={size} height={size}></Image>
+      <Image src={img} alt={title ?? ""} width={size} height={size}></Image>
       {title && <span style={{ margin: "5px" }}>{title}</span>}
     </div>
   );

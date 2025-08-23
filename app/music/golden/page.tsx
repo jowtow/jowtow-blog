@@ -13,9 +13,14 @@ import CoverArt from "@/components/CoverArt/CoverArt";
 
 export default function Golden() {
   const size = 400;
-  const shearRef = React.useRef(null);
-  function mouseMove(e) {
-    if (!shearRef) return;
+  const shearRef = React.useRef<HTMLDivElement>(null);
+  function mouseMove(e: React.MouseEvent) {
+    if (
+      !shearRef ||
+      shearRef.current === undefined ||
+      shearRef.current === null
+    )
+      return;
 
     const rect = shearRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -33,13 +38,25 @@ export default function Golden() {
     shearRef.current.style.boxShadow = `${shadowX}px ${shadowY}px 400px rgb(206, 162, 0)`;
   }
 
-  function resetTransform(e) {
+  function resetTransform() {
+    if (
+      !shearRef ||
+      shearRef.current === undefined ||
+      shearRef.current === null
+    )
+      return;
     shearRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
 
     shearRef.current.style.boxShadow = "0 0px 50px rgb(206, 162, 0)";
   }
 
-  function mouseEnter(e) {
+  function mouseEnter() {
+    if (
+      !shearRef ||
+      shearRef.current === undefined ||
+      shearRef.current === null
+    )
+      return;
     shearRef.current.style.transition =
       "transform 0.15s ease, box-shadow 0.5s ease";
   }
@@ -87,8 +104,8 @@ export default function Golden() {
         }}
         ref={shearRef}
         onMouseMove={(e) => mouseMove(e)}
-        onMouseLeave={(e) => resetTransform(e)}
-        onMouseEnter={(e) => mouseEnter(e)}
+        onMouseLeave={() => resetTransform()}
+        onMouseEnter={() => mouseEnter()}
       >
         <CoverArt
           img="/coverart/Golden_CoverArt.png"

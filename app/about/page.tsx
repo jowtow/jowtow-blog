@@ -11,10 +11,8 @@ import {
   faYoutube,
   faSpotify,
   faStackOverflow,
-  faTwitter,
 } from "@fortawesome/free-brands-svg-icons";
 import Image from "next/image";
-import styles from "./page.module.css";
 import Link from "next/link";
 export default function About() {
   return (
@@ -37,9 +35,10 @@ export default function About() {
               className="w-[175px] m-3 text-[var(--color-secondary)]"
             />
             <p className="p-4">
-              I'm a not-so-ordinary guy from the southeast corner of South
+              I&apos;m a not-so-ordinary guy from the southeast corner of South
               Dakota. I am on a constant journey of curiosity and learning so
-              hop aboard the blog train and let's partake in some tomfoolery!
+              hop aboard the blog train and let&apos;s partake in some
+              tomfoolery!
             </p>
           </div>
           <div className="flex items-center justify-between">
@@ -73,9 +72,9 @@ export default function About() {
             />
             <p className="p-10">
               I am a sporadic partaker in the painting of rocks. A few years
-              ago, my wife got me started on painting rocks and it's stuck with
-              me ever since. I also love photoshopping pictures of people into
-              scenery in which they don't belong.
+              ago, my wife got me started on painting rocks and it&apos;s stuck
+              with me ever since. I also love photoshopping pictures of people
+              into scenery in which they don&apos;t belong.
             </p>
           </div>
         </div>

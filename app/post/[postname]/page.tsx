@@ -45,7 +45,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
         className={`${styles.jowtowarticle} m-3 p-2 flex flex-col border-t-2 border-[var(--color-primary)]`}
       >
         <div className="p-[0px 5vw] flex flex-col">
-          <ReactMarkdown remarkPlugins={remarkGfm}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {post.markdownBody}
           </ReactMarkdown>
         </div>

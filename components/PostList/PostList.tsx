@@ -1,6 +1,6 @@
-import { Post } from "@/app/page";
 import Link from "next/link";
 import Image from "next/image";
+import { Post } from "@/lib/posts";
 
 export default function PostList({ posts }: { posts: Post[] }) {
   if (posts === undefined) return null;
