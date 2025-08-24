@@ -107,11 +107,7 @@ export default function Golden() {
         onMouseLeave={() => resetTransform()}
         onMouseEnter={() => mouseEnter()}
       >
-        <CoverArt
-          img="/coverart/Golden_CoverArt.png"
-          title="golden"
-          size={size}
-        />
+        <CoverArt img="/coverart/Golden_CoverArt.png" title="" size={size} />
       </div>
       <h1 style={{ marginTop: "50px" }}>Golden is out now!</h1>
       <p>Check it out, anywhere you listen to music</p>

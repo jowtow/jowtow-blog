@@ -14,6 +14,7 @@ import {
 } from "@fortawesome/free-brands-svg-icons";
 import Image from "next/image";
 import Link from "next/link";
+import JowTowTransition from "@/components/JowTowTransition/JowTowTransition";
 export default function About() {
   return (
     <>
@@ -26,7 +27,9 @@ export default function About() {
             alt="Picture of the author."
             className="rounded-full border-3 border-[var(--color-primary)]"
           />
-          <span className="m-5 text-[30px]">John Townsend</span>
+          <span className="m-5 text-[30px]">
+            <JowTowTransition />
+          </span>
         </div>
         <div className="mx-[20px] flex flex-col items-center justify-between max-w-[600px]">
           <div className={`flex items-center justify-between`}>
@@ -78,7 +81,7 @@ export default function About() {
             </p>
           </div>
         </div>
-        <div className="mx-[40px] w-full flex items-center justify-center text-xl">
+        <div className="mx-[40px] w-full flex items-center justify-center text-xl text-[var(--color-primary)]">
           <Link
             href="https://github.com/jowtow"
             target="_blank"
