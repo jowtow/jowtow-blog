@@ -3,16 +3,3 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-
-# Important: Handle client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
-
-# Or use this for App Router
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/___netlify-handler"
-  status = 200
