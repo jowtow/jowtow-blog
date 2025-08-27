@@ -1,29 +1,39 @@
 import Link from "next/link";
 import remarkGfm from "remark-gfm";
-import { getPosts, getPostBySlug, getSeries, Series } from "@/lib/posts";
+import {
+  getPosts,
+  getPostBySlug,
+  getSeries,
+  Series,
+  getPostBySlugAndSeries,
+} from "@/lib/posts";
 import { Post } from "@/lib/posts";
-import Author from "../../../components/Author/Author";
+import Author from "../../../../components/Author/Author";
 import ReactMarkdown from "react-markdown";
 import styles from "./page.module.css";
 import Image from "next/image";
 
 type PostParam = {
   postname: string;
+  subpostname: string;
 };
 // This replaces getStaticPaths
 export async function generateStaticParams() {
-  const posts = await getPosts();
+  const series = await getSeries();
+  const seriesSlugs = series.flatMap((series: Series) =>
+    series.posts.map((post: Post) => ({
+      postname: series.name,
+      subpostname: post.slug, // Return the dynamic segment directly
+    }))
+  );
 
-  const postSlugs = posts.map((post: Post) => ({
-    postname: post.slug, // Return the dynamic segment directly
-  }));
-
-  return postSlugs;
+  return seriesSlugs;
 }
 
 export default async function BlogPost({ params }: { params: PostParam }) {
-  console.log(await params);
-  const post = await getPostBySlug((await params).postname);
+  const subpostname = (await params).subpostname;
+  const postname = (await params).postname;
+  const post = await getPostBySlugAndSeries(subpostname, postname);
   return (
     <>
       <div className="relative h-64 overflow-hidden flex flex-col-reverse">

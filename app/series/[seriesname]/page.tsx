@@ -1,31 +1,33 @@
 import Link from "next/link";
-import remarkGfm from "remark-gfm";
-import { getPosts, getPostBySlug, getSeries, Series } from "@/lib/posts";
-import { Post } from "@/lib/posts";
-import Author from "../../../components/Author/Author";
-import ReactMarkdown from "react-markdown";
-import styles from "./page.module.css";
-import Image from "next/image";
+import { getSeries, getSeriesByName } from "@/lib/posts";
 
-type PostParam = {
-  postname: string;
+type SeriesParam = {
+  seriesname: string;
 };
-// This replaces getStaticPaths
+export const dynamicParams = false;
 export async function generateStaticParams() {
-  const posts = await getPosts();
+  const series = await getSeries();
 
-  const postSlugs = posts.map((post: Post) => ({
-    postname: post.slug, // Return the dynamic segment directly
-  }));
-
-  return postSlugs;
+  return series.map((x) => ({ seriesname: x.name }));
 }
 
-export default async function BlogPost({ params }: { params: PostParam }) {
-  console.log(await params);
-  const post = await getPostBySlug((await params).postname);
+export default async function SeriesListing({
+  params,
+}: {
+  params: SeriesParam;
+}) {
+  const series = await getSeriesByName((await params).seriesname);
   return (
     <>
+      {series.posts.map((post) => (
+        <Link
+          key={post.metadata.title}
+          href={`/post/${series.name}/${post.slug}`}
+        >
+          {post.metadata.title}
+        </Link>
+      ))}
+      {/*     
       <div className="relative h-64 overflow-hidden flex flex-col-reverse">
         <div className="relative z-10 bg-[var(--color-dark)] mx-auto p-2 rounded-t-lg opacity-[0.8]">
           <h1 className="text-center m-[0px] text-[1.3rem] text-[var(--color-primary)] z-1">
@@ -57,7 +59,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
       <Author></Author>
       <Link href="/" className="underline">
         ←_← more posts!
-      </Link>
+      </Link> */}
     </>
   );
 }

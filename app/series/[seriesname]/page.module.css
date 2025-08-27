@@ -1,0 +1,23 @@
+.jowtowarticle {
+  padding: 1vw 5vw;
+}
+
+.jowtowarticle img {
+  max-height: 40vh;
+  border-radius: 10px;
+  border: 2px solid var(--color-secondary);
+  text-align: center;
+  display: block;
+  margin: 10px auto;
+  max-width: 70vw;
+}
+
+.jowtowarticle p {
+  margin: 10px 0px;
+}
+
+/* .jowtowarticle h1 {
+  font-weight: bold;
+  font-size: 1.3rem;
+  margin: 10px 0px;
+} */

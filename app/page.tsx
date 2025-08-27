@@ -1,8 +1,10 @@
 import PostList from "@/components/PostList/PostList";
-import { getPosts } from "@/lib/posts";
+import SeriesList from "@/components/SeriesList/SeriesList";
+import { getPosts, getSeries } from "@/lib/posts";
 
 export default async function Home() {
   const posts = await getPosts();
+  const series = await getSeries();
   return (
     <>
       <h1 className="text-2xl font-bold">Welcome to my blog!</h1>
@@ -13,6 +15,7 @@ export default async function Home() {
       </p>
       <main>
         <PostList posts={posts} />
+        <SeriesList seriesList={series} />
       </main>
     </>
   );
