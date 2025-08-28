@@ -1,6 +1,6 @@
 import Link from "next/link";
 import remarkGfm from "remark-gfm";
-import { getPosts, getPostBySlug, getSeries, Series } from "@/lib/posts";
+import { getPosts, getPostBySlug } from "@/lib/posts";
 import { Post } from "@/lib/posts";
 import Author from "../../../components/Author/Author";
 import ReactMarkdown from "react-markdown";
@@ -10,6 +10,7 @@ import Image from "next/image";
 type PostParam = {
   postname: string;
 };
+
 // This replaces getStaticPaths
 export async function generateStaticParams() {
   const posts = await getPosts();
@@ -22,8 +23,8 @@ export async function generateStaticParams() {
 }
 
 export default async function BlogPost({ params }: { params: PostParam }) {
-  console.log(await params);
   const post = await getPostBySlug((await params).postname);
+
   return (
     <>
       <div className="relative h-64 overflow-hidden flex flex-col-reverse">

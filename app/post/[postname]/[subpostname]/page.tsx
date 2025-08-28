@@ -22,7 +22,7 @@ export async function generateStaticParams() {
   const series = await getSeries();
   const seriesSlugs = series.flatMap((series: Series) =>
     series.posts.map((post: Post) => ({
-      postname: series.name,
+      postname: series.path,
       subpostname: post.slug, // Return the dynamic segment directly
     }))
   );

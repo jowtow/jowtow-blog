@@ -2,6 +2,17 @@ import fs from "fs";
 import path from "path";
 import { readdir, stat } from "fs/promises";
 import matter from "gray-matter";
+
+import * as z from "zod";
+
+const seriesMetadata = z.object({
+  name: z.string(),
+  description: z.string(),
+  date: z.coerce.date(),
+  image: z.string(),
+});
+type SeriesMetadata = z.infer<typeof seriesMetadata>;
+
 export type PostMetadata = {
   title: string;
   image: string;
@@ -16,8 +27,8 @@ export type Post = {
 };
 
 export type Series = {
-  name: string;
-  image: string;
+  metadata: SeriesMetadata;
+  path: string;
   posts: Post[];
 };
 
@@ -56,6 +67,11 @@ export async function getSeries() {
   const subdirectories = await getSubdirectories(postsDirectory);
 
   const series = subdirectories.map((subdirectory) => {
+    const metadataFile = fs.readFileSync(
+      path.join(postsDirectory, subdirectory, "metadata.json"),
+      "utf8"
+    );
+    const metadata = seriesMetadata.parse(JSON.parse(metadataFile));
     const fileNames = fs.readdirSync(path.join(postsDirectory, subdirectory));
     const markdownFiles = fileNames.filter((name) => name.endsWith(".md"));
 
@@ -79,16 +95,17 @@ export async function getSeries() {
       };
     });
 
-    const seriesName = subdirectory;
     return {
-      name: seriesName,
-      image: `/thumbnails/${seriesName}.jpg`,
+      metadata: metadata,
+      path: subdirectory,
       posts: posts,
     } as Series;
   });
 
   // Sort posts by date (newest first)
-  const sortedSeries = series.sort((a, b) => (a.name < b.name ? 1 : -1));
+  const sortedSeries = series.sort((a, b) =>
+    a.metadata.date < b.metadata.date ? 1 : -1
+  );
 
   return sortedSeries;
 }
@@ -155,6 +172,11 @@ export async function getPostBySlugAndSeries(
 }
 
 export async function getSeriesByName(slug: string): Promise<Series> {
+  const metadataFile = fs.readFileSync(
+    path.join(process.cwd(), "posts", slug, "metadata.json"),
+    "utf8"
+  );
+  const metadata = seriesMetadata.parse(JSON.parse(metadataFile));
   const subdirectory = path.join(process.cwd(), "posts", slug);
   const fileNames = fs.readdirSync(subdirectory);
   const markdownFiles = fileNames.filter((name) => name.endsWith(".md"));
@@ -175,10 +197,9 @@ export async function getSeriesByName(slug: string): Promise<Series> {
     };
   });
 
-  const seriesName = path.basename(subdirectory);
   return {
-    name: seriesName,
-    image: `/thumbnails/${seriesName}.png`,
+    metadata: metadata,
+    path: slug,
     posts: posts,
   } as Series;
 }
