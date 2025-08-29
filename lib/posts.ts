@@ -10,6 +10,7 @@ const seriesMetadata = z.object({
   description: z.string(),
   date: z.coerce.date(),
   image: z.string(),
+  individualPages: z.boolean(),
 });
 type SeriesMetadata = z.infer<typeof seriesMetadata>;
 

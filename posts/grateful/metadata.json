@@ -2,5 +2,6 @@
   "name": "Grateful Series",
   "description": "Smaller posts about things I'm grateful for",
   "date": "2025-08-27",
-  "image": "/thumbnails/grateful.jpg"
+  "image": "/thumbnails/grateful.jpg",
+  "individualPages": false
 }

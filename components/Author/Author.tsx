@@ -5,13 +5,13 @@ import Image from "next/image";
 export default function Author() {
   return (
     <>
-      <div className="m-2 p-1 rounded border-2 border-[var(--color-primary)] flex ">
+      <div className="relative m-2 p-1 rounded border-2 border-[var(--color-primary)] flex ">
         <Image
           className="rounded-full m-2 mr-5"
           src="/Author.jpg"
           alt="Picture of the author."
-          height={100}
           width={100}
+          height={100}
         />
         <div className="flex flex-col justify-center">
           <div className="text-lg">

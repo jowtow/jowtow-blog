@@ -23,13 +23,13 @@ a {
   --background: #ffffff;
   --foreground: #171717;
 
-  --solarized-white: rgb(238, 232, 213);
+  --solarized-white: rgb(199, 197, 192);
   --text-color-dark: rgb(22, 25, 37);
-  --post-link-background: goldenrod;
+  --post-link-background: deeppink;
   --color-dark: #1f1f1f;
   --color-lessdark: #2c2c2c;
-  --color-secondary: silver;
-  --color-primary: goldenrod;
+  --color-secondary: tomato;
+  --color-primary: deeppink;
 }
 
 @theme inline {

@@ -29,7 +29,7 @@ export default function SeriesList({ seriesList }: { seriesList: Series[] }) {
                     />
                   </div>
                   <div className="flex justify-around items-center text-[var(--text-color-dark)] no-underline italic">
-                    <span className="text-start font-bold m-[10px] text-[1.2em]">
+                    <span className="text-start font-bold mx-2 text-[1.2em]">
                       {series.metadata.name}
                     </span>
                     <span className="text-[0.8rem] m-2">
