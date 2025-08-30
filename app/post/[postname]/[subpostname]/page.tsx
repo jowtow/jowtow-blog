@@ -53,6 +53,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
           src={post.metadata.image}
           alt={post.metadata.title}
           fill
+          priority
         />
       </div>
       <article
