@@ -37,7 +37,7 @@ export default function About() {
               icon={faAddressCard}
               className="w-[50] m-3 text-[var(--color-secondary)]"
             />
-            <p className="p-1 text-center w-[50ch]">
+            <p className="p-1 text-center max-w-[50ch]">
               I&apos;m a not-so-ordinary guy from the southeast corner of South
               Dakota. I am on a constant journey of curiosity and learning so
               hop aboard the blog train and let&apos;s partake in some
@@ -49,7 +49,7 @@ export default function About() {
               icon={faBriefcase}
               className="w-[50] m-3 text-[var(--color-secondary)]"
             />
-            <p className="p-1 text-center w-[50ch]">
+            <p className="p-1 text-center max-w-[50ch]">
               My main profession and passion is Software Engineering. I attended
               Dakota State University and received my Bachelors Degree in
               Computer Science and Mathematics in the Spring of 2019.
@@ -60,7 +60,7 @@ export default function About() {
               icon={faMusic}
               className="w-[50] m-3 text-[var(--color-secondary)]"
             />
-            <p className="p-1 text-center w-[50ch]">
+            <p className="p-1 text-center max-w-[50ch]">
               Singing, dancing, and all other mediums of experiencing music are
               some of my favorite pass-times. You can often find me jamming to a
               capella metal or future bass. I was classically trained to sing
@@ -73,7 +73,7 @@ export default function About() {
               icon={faPaintBrush}
               className="w-[50] m-3 text-[var(--color-secondary)]"
             />
-            <p className="p-1 text-center w-[50ch]">
+            <p className="p-1 text-center max-w-[50ch]">
               I am a sporadic partaker in the painting of rocks. A few years
               ago, my wife got me started on painting rocks and it&apos;s stuck
               with me ever since. I also love photoshopping pictures of people
