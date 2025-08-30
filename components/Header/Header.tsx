@@ -7,7 +7,7 @@ export default function Header() {
         <nav className="nav">
           <Link href="/">
             <span className="text-[var(--color-primary)]">blog</span>.
-            <span className="text-[var(--color-secondary)]">jowtow.dev</span>
+            <span className="">jowtow.dev</span>
           </Link>
           <Link href="/posts" className="m-3">
             posts
