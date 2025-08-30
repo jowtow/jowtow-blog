@@ -17,14 +17,13 @@ export default function JowTowTransition() {
   return (
     <>
       <div
-        onMouseOver={() => setIsVisible(false)}
-        onMouseOut={() => setIsVisible(true)}
-        className="hover:cursor-pointer flex"
+        onClick={() => setIsVisible((x) => !x)}
+        className="hover:cursor-pointer flex "
       >
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           j
         </motion.div>
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           o
         </motion.div>
         {isVisible && (
@@ -34,18 +33,18 @@ export default function JowTowTransition() {
             <AppearingLetter letter="&nbsp;"></AppearingLetter>
           </>
         )}
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           w
         </motion.div>
 
         {isVisible && <AppearingLetter letter="&nbsp;"></AppearingLetter>}
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           t
         </motion.div>
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           o
         </motion.div>
-        <motion.div layout className="text-[var(--color-primary)]">
+        <motion.div layoutId={crypto.randomUUID()} className="">
           w
         </motion.div>
 
@@ -67,11 +66,16 @@ function AppearingLetter({ letter }: { letter: string }) {
   return (
     <AnimatePresence>
       <motion.div
-        layout
+        layoutId={crypto.randomUUID()}
         exit={{ opacity: 0 }}
-        initial={{ opacity: 0, rotate: 50, y: 20 }}
-        animate={{ opacity: 0.8, rotate: 0, y: 0 }}
-        transition={{ duration: 1 }}
+        initial={{ opacity: 0, y: -100 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          type: "spring",
+          damping: 10,
+          stiffness: 200,
+        }}
       >
         {letter}
       </motion.div>

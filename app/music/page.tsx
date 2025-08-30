@@ -4,14 +4,16 @@ import Link from "next/link";
 export default function Page() {
   return (
     <>
-      <h1>jowtow music</h1>
+      <div className="max-w-[70ch] mx-auto mb-3 text-center">
+        <h1>jowtow&apos;s music</h1>
 
-      <p>
-        jowtow is an up and coming musician with an electronic spin on the
-        world. His intensity and tomfoolery know no bounds when it comes to
-        making beats that will make you get on your feet. Check out his music on
-        Spotify or anywhere that you can find music!
-      </p>
+        <p>
+          jowtow is an up and coming musician with an electronic spin on the
+          world. His intensity and tomfoolery know no bounds when it comes to
+          making beats that will make you get on your feet. Check out his music
+          on Spotify or anywhere that you can find music!
+        </p>
+      </div>
 
       <h2 style={{ textAlign: "center" }}>Releases</h2>
       <div style={{ display: "flex", justifyContent: "center" }}>

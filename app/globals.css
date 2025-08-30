@@ -7,7 +7,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
   background-color: var(--color-dark);
-  color: var(--solarized-white);
+  color: var(--text-light);
 }
 
 a {
@@ -20,28 +20,14 @@ a {
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-
-  --solarized-white: rgb(199, 197, 192);
+  --text-light: #ffffff;
   --text-color-dark: rgb(22, 25, 37);
-  --post-link-background: deeppink;
-  --color-dark: #1f1f1f;
-  --color-lessdark: #2c2c2c;
-  --color-secondary: tomato;
-  --color-primary: deeppink;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-dark);
-    --foreground: var(--solarized-white);
-  }
+  --post-link-background: var(--color-dark);
+  --color-dark: #212121;
+  --color-secondary: #9caf88;
+  --secondary: #9caf88;
+  --color-primary: #7fff00;
+  --primary: #7fff00;
 }
 
 body {
@@ -81,4 +67,14 @@ h3 {
 }
 h4 {
   font-size: 1.1em;
+}
+
+.jowtowarticle img {
+  max-height: 40vh;
+  border-radius: 10px;
+  border: 2px solid var(--color-secondary);
+  text-align: center;
+  display: block;
+  margin: 10px auto;
+  max-width: 70vw;
 }

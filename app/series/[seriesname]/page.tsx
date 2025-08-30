@@ -21,7 +21,7 @@ export default async function SeriesListing({
   const series = await getSeriesByName((await params).seriesname);
   return (
     <>
-      <div className="relative h-64 overflow-hidden flex flex-col-reverse">
+      <div className="relative h-64 overflow-hidden flex flex-col-reverse ">
         <div className="relative z-10 bg-[var(--color-dark)] mx-auto p-2 rounded-t-lg opacity-[0.8]">
           <h1 className="text-center m-[0px] text-[1.3rem] text-[var(--color-primary)] z-1">
             {series.metadata.name}
@@ -37,7 +37,7 @@ export default async function SeriesListing({
           fill
         />
       </div>
-      <div className="w-full flex flex-col items-center">
+      <div className="w-full flex flex-col items-center border-t-2 border-[var(--color-primary)] m-3 p-2">
         {/* <h1 className="text-center">{series.metadata.name}</h1> */}
         {series.metadata.individualPages && (
           <div className="flex flex-col items-center">
@@ -54,7 +54,7 @@ export default async function SeriesListing({
           </div>
         )}
         {!series.metadata.individualPages && (
-          <div className="flex flex-col items-center sm:px-10 max-w-[70ch]">
+          <div className="flex flex-col items-center sm:px-10 max-w-[70ch] jowtowarticle  ">
             {series.posts
               .sort((a, b) => (a.metadata.date < b.metadata.date ? 1 : -1))
               .map((post) => (
