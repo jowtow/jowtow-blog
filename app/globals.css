@@ -20,7 +20,7 @@ a {
 }
 
 :root {
-  --text-light: #ffffff;
+  --text-light: #c0c0c0;
   --text-color-dark: rgb(22, 25, 37);
   --post-link-background: var(--color-dark);
   --color-dark: #212121;

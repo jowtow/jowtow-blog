@@ -16,6 +16,14 @@
   margin: 10px 0px;
 }
 
+.jowtowarticle p {
+  line-height: 1.7rem;
+}
+
+.jowtowarticle h1,
+.jowtowarticle h2 {
+  border-bottom: 1px solid var(--primary);
+}
 /* .jowtowarticle h1 {
   font-weight: bold;
   font-size: 1.3rem;
