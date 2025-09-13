@@ -5,4 +5,4 @@ date: "2025-09-07"
 
 # fire escape
 
-![fire escape](/blogphotos/doodles/fireescape.jpg)
+![fire escape](/blogphotos/doodles/fireescape.webp)

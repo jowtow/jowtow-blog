@@ -1,6 +1,6 @@
 ---
 title: "Too Many Acronyms"
-image: "/thumbnails/TooManyAcronyms.jpg"
+image: "/thumbnails/TooManyAcronyms.webp"
 author: "John Townsend"
 date: "2022-09-24"
 ---

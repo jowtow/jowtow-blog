@@ -1,6 +1,6 @@
 ---
 title: "jowtow runs now"
-image: "/thumbnails/RunnerJohn.jpg"
+image: "/thumbnails/RunnerJohn.webp"
 author: "John Townsend"
 date: "2025-09-07"
 ---
@@ -15,7 +15,7 @@ The heaviest I think I've been was in college, I capped out at about 330 pounds.
 
 Now I am right around 260ish. Still obese, and I love to call myself morbidly obese. Mostly because the BMI chart is messed up and a great way to make yourself feel terrible. Either way, that's enough about my health. I want to talk about running and what's worked for me.
 
-![spit](/blogphotos/jowtowruns/spit.jpg)
+![spit](/blogphotos/jowtowruns/spit.webp)
 
 ## Stress
 
@@ -33,4 +33,4 @@ As you get older, your iron man mentality fades. I don't know if I ever had that
 
 Two coffees, two donuts. That's all I consumed this morning before my run. Felt jazzed. Keep eating donuts and start running! Had no idea I'd make it to 2 miles, didn't do it fast, but I did it. Onto the 3-mile goal!
 
-![san diego run](/blogphotos/jowtowruns/sandiego.jpeg)
+![san diego run](/blogphotos/jowtowruns/sandiego.webp)

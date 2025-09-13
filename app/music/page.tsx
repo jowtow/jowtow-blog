@@ -19,14 +19,14 @@ export default function Page() {
       <div style={{ display: "flex", justifyContent: "center" }}>
         <Link href="/music/golden" className="w-fit m-2">
           <CoverArt
-            img="/coverart/Golden_CoverArt.png"
+            img="/coverart/Golden_CoverArt.webp"
             title="Golden"
             size={300}
           />
         </Link>
         <div className="w-fit m-2">
           <CoverArt
-            img="/coverart/GetDownToIt_CoverArt.png"
+            img="/coverart/GetDownToIt_CoverArt.webp"
             title="Get Down To It (Sample)"
             size={300}
           />

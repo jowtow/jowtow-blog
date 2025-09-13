@@ -5,4 +5,4 @@ date: "2025-08-30"
 
 # sandwich
 
-![sandwich](/blogphotos/doodles/sandwich.jpg)
+![sandwich](/blogphotos/doodles/sandwich.webp)

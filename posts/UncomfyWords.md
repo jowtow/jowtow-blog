@@ -1,6 +1,6 @@
 ---
 title: "Uncomfy Words"
-image: "/thumbnails/uncomfyWords.jpg"
+image: "/thumbnails/uncomfyWords.webp"
 author: "John Townsend"
 date: "2022-01-25"
 ---
@@ -37,7 +37,7 @@ Not only is this word a chore to pronounce, but it also makes me think of things
 
 Makes me think of this....
 \
-![Sosig](/Sosig.jpg)
+![Sosig](/blogphotos/Sosig.webp)
 \
 ...enough said.
 

@@ -107,7 +107,7 @@ export default function Golden() {
         onMouseLeave={() => resetTransform()}
         onMouseEnter={() => mouseEnter()}
       >
-        <CoverArt img="/coverart/Golden_CoverArt.png" title="" size={size} />
+        <CoverArt img="/coverart/Golden_CoverArt.webp" title="" size={size} />
       </div>
       <h1 style={{ marginTop: "50px" }}>Golden is out now!</h1>
       <p>Check it out, anywhere you listen to music</p>
@@ -170,7 +170,7 @@ export default function Golden() {
         >
           <Image
             alt="golden"
-            src="/coverart/Golden_Thumbnail.png"
+            src="/thumbnails/Golden_Thumbnail.webp"
             width={711}
             height={400}
           />

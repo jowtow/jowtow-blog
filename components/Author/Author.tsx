@@ -9,7 +9,7 @@ export default function Author() {
         <div className="relative w-[100px] h-[100px] aspect-[5/5] m-2">
           <Image
             className="rounded-full"
-            src="/Author.jpg"
+            src="/Author.webp"
             alt="Picture of the author."
             fill
           />

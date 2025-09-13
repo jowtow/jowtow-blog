@@ -5,4 +5,4 @@ date: "2025-08-30"
 
 # skunk
 
-![skunk](/blogphotos/doodles/skunk.jpg)
+![skunk](/blogphotos/doodles/skunk.webp)

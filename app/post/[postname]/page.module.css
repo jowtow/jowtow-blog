@@ -9,7 +9,7 @@
   text-align: center;
   display: block;
   margin: 10px auto;
-  max-width: 70vw;
+  max-width: min(100%, 70vw);
 }
 
 .jowtowarticle p {

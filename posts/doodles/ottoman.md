@@ -5,4 +5,4 @@ date: "2025-09-01"
 
 # Ottoman
 
-![ottoman](/blogphotos/doodles/ottoman.jpg)
+![ottoman](/blogphotos/doodles/ottoman.webp)

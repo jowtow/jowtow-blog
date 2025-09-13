@@ -5,4 +5,4 @@ date: "2025-08-30"
 
 # desk chair
 
-![desk chair](/blogphotos/doodles/deskchair.jpg)
+![desk chair](/blogphotos/doodles/deskchair.webp)
