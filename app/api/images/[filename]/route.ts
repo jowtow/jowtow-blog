@@ -27,12 +27,12 @@ export async function GET(
     }
 
     // Get metadata to determine content type
-    const metadata = file.metadata as Record<string, string> | undefined;
+    const metadata = (file as any).metadata as Record<string, string> | undefined;
     const contentType = metadata?.mimeType || 'image/jpeg';
 
     // Convert ReadableStream to ArrayBuffer
     const chunks: Uint8Array[] = [];
-    const reader = file.body?.getReader();
+    const reader = (file as any).body?.getReader();
     
     if (reader) {
       try {
