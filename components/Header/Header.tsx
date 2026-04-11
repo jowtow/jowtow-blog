@@ -1,6 +1,11 @@
+'use client';
+
 import Link from "next/link";
+import { useAuthStore } from "@/lib/auth";
 
 export default function Header() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
   return (
     <>
       <header className="p-[5px] bg-[url(/header.png)] bg-right bg-no-repeat bg-cover] min-h-[200px] bg-[size:2500px_200px] flex justify-start xl:justify-center">
@@ -21,6 +26,11 @@ export default function Header() {
             <Link href="/about" className="m-3">
               about
             </Link>
+            {!isLoading && isAuthenticated && (
+              <Link href="/admin" className="m-3 text-yellow-400 font-semibold">
+                admin
+              </Link>
+            )}
           </div>
         </nav>
       </header>
