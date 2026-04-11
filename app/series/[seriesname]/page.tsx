@@ -6,7 +6,7 @@ import Image from "next/image";
 type SeriesParam = {
   seriesname: string;
 };
-export const dynamicParams = false;
+export const dynamic = 'force-dynamic';
 export async function generateStaticParams() {
   const series = await getSeries();
 
@@ -30,12 +30,17 @@ export default async function SeriesListing({
             started on {series.metadata.date.toLocaleDateString()}
           </p>
         </div>
-        <Image
-          className="absolute inset-0 object-cover z-0"
-          src={series.metadata.image}
-          alt={series.metadata.name}
-          fill
-        />
+        {series.metadata.image ? (
+          <Image
+            className="absolute inset-0 object-cover z-0"
+            src={series.metadata.image}
+            alt={series.metadata.name}
+            fill
+            unoptimized={series.metadata.image.startsWith('/api/images/')}
+          />
+        ) : (
+          <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />
+        )}
       </div>
       <div className="w-full flex flex-col items-center border-t-2 border-[var(--color-primary)] m-3 p-2">
         {/* <h1 className="text-center">{series.metadata.name}</h1> */}

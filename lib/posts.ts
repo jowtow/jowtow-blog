@@ -3,6 +3,7 @@ import path from "path";
 import { readdir, stat } from "fs/promises";
 import matter from "gray-matter";
 import { getStore } from "@netlify/blobs";
+import { getDynamicSeriesBySlug, listDynamicSeries } from "@/lib/dynamicSeries";
 
 import * as z from "zod";
 
@@ -107,6 +108,19 @@ export async function getDynamicPosts(): Promise<Post[]> {
 }
 
 export async function getSeries() {
+  const staticSeries = await getStaticSeries();
+  const dynamicSeries = await getDynamicSeries();
+
+  const allSeries = [...staticSeries, ...dynamicSeries];
+
+  const sortedSeries = allSeries.sort((a, b) =>
+    a.metadata.date < b.metadata.date ? 1 : -1
+  );
+
+  return sortedSeries;
+}
+
+async function getStaticSeries() {
   const postsDirectory = path.join(process.cwd(), "posts");
   const subdirectories = await getSubdirectories(postsDirectory);
 
@@ -152,6 +166,36 @@ export async function getSeries() {
   );
 
   return sortedSeries;
+}
+
+async function getDynamicSeries(): Promise<Series[]> {
+  try {
+    const dynamicSeries = await listDynamicSeries();
+
+    return dynamicSeries.map((series) => ({
+      metadata: {
+        name: series.metadata.name,
+        description: series.metadata.description,
+        date: new Date(series.metadata.date),
+        image: series.metadata.image,
+        individualPages: series.metadata.individualPages,
+      },
+      path: series.metadata.slug,
+      posts: series.posts.map((post) => ({
+        metadata: {
+          title: post.title,
+          image: post.image,
+          author: post.author,
+          date: post.date,
+        },
+        markdownBody: post.markdown,
+        slug: post.slug,
+      })),
+    }));
+  } catch (error) {
+    console.warn("Could not fetch dynamic series:", error);
+    return [];
+  }
 }
 
 async function getSubdirectories(dirPath: string) {
@@ -225,52 +269,102 @@ export async function getPostBySlugAndSeries(
   postname: string,
   series: string
 ): Promise<Post> {
-  const postsDirectory = path.join(process.cwd(), "posts", series);
+  try {
+    const postsDirectory = path.join(process.cwd(), "posts", series);
 
-  const fileNames = fs.readdirSync(postsDirectory);
-  const markdownFiles = fileNames.filter((name) => name.startsWith(postname));
+    const fileNames = fs.readdirSync(postsDirectory);
+    const markdownFiles = fileNames.filter((name) => name.startsWith(postname));
 
-  const fullPath = path.join(postsDirectory, markdownFiles[0]);
-  console.log(fullPath);
-  const fileContents = fs.readFileSync(fullPath, "utf8");
-  const document = matter(fileContents);
+    if (markdownFiles.length > 0) {
+      const fullPath = path.join(postsDirectory, markdownFiles[0]);
+      const fileContents = fs.readFileSync(fullPath, "utf8");
+      const document = matter(fileContents);
 
-  return {
-    metadata: document.data as PostMetadata,
-    markdownBody: document.content,
-    slug: postname,
-  };
+      return {
+        metadata: document.data as PostMetadata,
+        markdownBody: document.content,
+        slug: postname,
+      };
+    }
+  } catch (error) {
+    console.warn(`Could not find static series post ${postname} in ${series}:`, error);
+  }
+
+  const dynamicSeries = await getDynamicSeriesBySlug(series);
+  const dynamicPost = dynamicSeries?.posts.find((post) => post.slug === postname);
+
+  if (dynamicPost) {
+    return {
+      metadata: {
+        title: dynamicPost.title,
+        image: dynamicPost.image,
+        author: dynamicPost.author,
+        date: dynamicPost.date,
+      },
+      markdownBody: dynamicPost.markdown,
+      slug: dynamicPost.slug,
+    };
+  }
+
+  throw new Error(`Series post with slug "${postname}" not found in "${series}"`);
 }
 
 export async function getSeriesByName(slug: string): Promise<Series> {
-  const metadataFile = fs.readFileSync(
-    path.join(process.cwd(), "posts", slug, "metadata.json"),
-    "utf8"
-  );
-  const metadata = seriesMetadata.parse(JSON.parse(metadataFile));
-  const subdirectory = path.join(process.cwd(), "posts", slug);
-  const fileNames = fs.readdirSync(subdirectory);
-  const markdownFiles = fileNames.filter((name) => name.endsWith(".md"));
+  try {
+    const metadataFile = fs.readFileSync(
+      path.join(process.cwd(), "posts", slug, "metadata.json"),
+      "utf8"
+    );
+    const metadata = seriesMetadata.parse(JSON.parse(metadataFile));
+    const subdirectory = path.join(process.cwd(), "posts", slug);
+    const fileNames = fs.readdirSync(subdirectory);
+    const markdownFiles = fileNames.filter((name) => name.endsWith(".md"));
 
-  const posts = markdownFiles.map((fileName) => {
-    // Remove ".md" from file name to get slug
-    const slug = fileName.slice(0, -3);
+    const posts = markdownFiles.map((fileName) => {
+      const slug = fileName.slice(0, -3);
+      const fullPath = path.join(subdirectory, fileName);
+      const fileContents = fs.readFileSync(fullPath, "utf8");
+      const document = matter(fileContents);
 
-    const fullPath = path.join(subdirectory, fileName);
-    const fileContents = fs.readFileSync(fullPath, "utf8");
-
-    const document = matter(fileContents);
+      return {
+        metadata: document.data as PostMetadata,
+        markdownBody: document.content,
+        slug,
+      };
+    });
 
     return {
-      metadata: document.data as PostMetadata,
-      markdownBody: document.content,
-      slug,
-    };
-  });
+      metadata: metadata,
+      path: slug,
+      posts: posts,
+    } as Series;
+  } catch (error) {
+    console.warn(`Could not find static series with slug: ${slug}`, error);
+  }
 
-  return {
-    metadata: metadata,
-    path: slug,
-    posts: posts,
-  } as Series;
+  const dynamicSeries = await getDynamicSeriesBySlug(slug);
+  if (dynamicSeries) {
+    return {
+      metadata: {
+        name: dynamicSeries.metadata.name,
+        description: dynamicSeries.metadata.description,
+        date: new Date(dynamicSeries.metadata.date),
+        image: dynamicSeries.metadata.image,
+        individualPages: dynamicSeries.metadata.individualPages,
+      },
+      path: dynamicSeries.metadata.slug,
+      posts: dynamicSeries.posts.map((post) => ({
+        metadata: {
+          title: post.title,
+          image: post.image,
+          author: post.author,
+          date: post.date,
+        },
+        markdownBody: post.markdown,
+        slug: post.slug,
+      })),
+    } as Series;
+  }
+
+  throw new Error(`Series with slug "${slug}" not found`);
 }

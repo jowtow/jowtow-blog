@@ -21,12 +21,19 @@ export default function SeriesList({ seriesList }: { seriesList: Series[] }) {
                   className="flex flex-col align-center justify-between w-[300px]"
                 >
                   <div className="relative rounded h-[175px]">
-                    <Image
-                      className="rounded-t object-cover"
-                      src={series.metadata.image}
-                      alt="Picture of the author."
-                      fill
-                    />
+                    {series.metadata.image ? (
+                      <Image
+                        className="rounded-t object-cover"
+                        src={series.metadata.image}
+                        alt={series.metadata.name}
+                        fill
+                        unoptimized={series.metadata.image.startsWith('/api/images/')}
+                      />
+                    ) : (
+                      <div className="h-full w-full rounded-t bg-[var(--color-light)] flex items-center justify-center text-[0.9rem] text-[var(--color-dark)]">
+                        No cover image
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-around items-center no-underline italic  border-t-[var(--primary)] border-t-3">
                     <span className="text-start font-bold mx-2 text-[1.2em]">
