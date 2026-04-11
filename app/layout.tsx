@@ -33,6 +33,7 @@ export default function RootLayout({
               <span className="">jowtow.dev</span>
             </Link>
             <Link href="/posts">posts</Link>
+            <Link href="/collections">collections</Link>
             <Link href="/music">music</Link>
             <Link href="/about">about</Link>
           </div>
