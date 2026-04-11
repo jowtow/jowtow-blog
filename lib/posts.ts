@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { readdir, stat } from "fs/promises";
 import matter from "gray-matter";
+import { getStore } from "@netlify/blobs";
 
 import * as z from "zod";
 
@@ -34,6 +35,21 @@ export type Series = {
 };
 
 export async function getPosts() {
+  const staticPosts = await getStaticPosts();
+  const dynamicPosts = await getDynamicPosts();
+
+  // Combine both sources of posts
+  const allPosts = [...staticPosts, ...dynamicPosts];
+
+  // Sort posts by date (newest first)
+  const sortedPosts = allPosts.sort((a, b) =>
+    Date.parse(a.metadata.date) < Date.parse(b.metadata.date) ? 1 : -1
+  );
+
+  return sortedPosts;
+}
+
+export async function getStaticPosts() {
   const postsDirectory = path.join(process.cwd(), "posts");
 
   const fileNames = fs.readdirSync(postsDirectory);
@@ -55,12 +71,39 @@ export async function getPosts() {
     };
   });
 
-  // Sort posts by date (newest first)
-  const sortedPosts = posts.sort((a, b) =>
-    Date.parse(a.metadata.date) < Date.parse(b.metadata.date) ? 1 : -1
-  );
+  return posts;
+}
 
-  return sortedPosts;
+export async function getDynamicPosts(): Promise<Post[]> {
+  try {
+    const store = getStore("posts");
+    const blobs = await store.list();
+
+    const posts = await Promise.all(
+      blobs.map(async (blob) => {
+        const data = await store.get(blob.key);
+        if (!data) return null;
+
+        const postData = JSON.parse(data.text());
+        return {
+          metadata: {
+            title: postData.title,
+            image: postData.image,
+            author: postData.author,
+            date: postData.date,
+          },
+          markdownBody: postData.markdown,
+          slug: postData.slug,
+        } as Post;
+      })
+    );
+
+    return posts.filter(Boolean) as Post[];
+  } catch (error) {
+    // Blobs might not be available in development, return empty array
+    console.warn("Could not fetch dynamic posts:", error);
+    return [];
+  }
 }
 
 export async function getSeries() {
