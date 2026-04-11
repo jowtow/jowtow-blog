@@ -1,13 +1,6 @@
 [build]
   command = "npm run build"
-  functions = "netlify/functions"
   publish = ".next"
-
-[[redirects]]
-  from = "/admin*"
-  to = "/.netlify/functions/admin"
-  status = 200
-  force = true
 
 [context.production]
   environment = { NODE_ENV = "production" }
