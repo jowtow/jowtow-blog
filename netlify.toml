@@ -7,3 +7,11 @@
 
 [context.deploy-preview]
   environment = { NODE_ENV = "production" }
+
+[identity]
+  provider = "netlify"
+
+[[redirects]]
+  from = "/.netlify/functions/identity/*"
+  to = "/.netlify/identity"
+  status = 200
