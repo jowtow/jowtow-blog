@@ -26,39 +26,34 @@ export async function GET(
       );
     }
 
-    // Get metadata to determine content type
-    const metadata = (file as any).metadata as Record<string, string> | undefined;
-    const contentType = metadata?.mimeType || 'image/jpeg';
+    // Get metadata to determine content type if available
+    let contentType = 'image/jpeg';
+    let imageBuffer: ArrayBuffer;
 
-    // Convert ReadableStream to ArrayBuffer
-    const chunks: Uint8Array[] = [];
-    const reader = (file as any).body?.getReader();
+    // Handle Netlify Blob response - cast to any to work with the dynamic type
+    const blobData = file as any;
     
-    if (reader) {
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-        }
-      } finally {
-        reader.releaseLock();
-      }
+    if (typeof blobData === 'string') {
+      // If it's a string, convert to buffer (this shouldn't happen for images)
+      imageBuffer = new TextEncoder().encode(blobData).buffer;
+    } else if (blobData.arrayBuffer && typeof blobData.arrayBuffer === 'function') {
+      // It's a Blob or Blob-like object
+      contentType = blobData.type || 'image/jpeg';
+      imageBuffer = await blobData.arrayBuffer();
+    } else if (blobData.buffer) {
+      // It might be a Buffer or typed array
+      imageBuffer = blobData.buffer;
+    } else {
+      throw new Error('Unable to convert file to ArrayBuffer: unsupported type');
     }
 
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-    const uint8Array = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      uint8Array.set(chunk, offset);
-      offset += chunk.length;
-    }
+    const uint8Array = new Uint8Array(imageBuffer);
 
     return new NextResponse(uint8Array, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Length': totalLength.toString(),
+        'Content-Length': uint8Array.length.toString(),
       },
     });
   } catch (error) {
