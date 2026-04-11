@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const store = getStore('posts');
-    const blobs = await store.list();
+    const listResult = await store.list();
 
     const posts = await Promise.all(
-      blobs.map(async (blob: { key: string }) => {
+      listResult.blobs.map(async (blob: { key: string }) => {
         const data = await store.get(blob.key);
-        return data ? JSON.parse(data.text()) : null;
+        return data ? JSON.parse(data as string) : null;
       })
     );
 

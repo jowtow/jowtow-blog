@@ -77,14 +77,14 @@ export async function getStaticPosts() {
 export async function getDynamicPosts(): Promise<Post[]> {
   try {
     const store = getStore("posts");
-    const blobs = await store.list();
+    const listResult = await store.list();
 
     const posts = await Promise.all(
-      blobs.map(async (blob) => {
+      listResult.blobs.map(async (blob: { key: string }) => {
         const data = await store.get(blob.key);
         if (!data) return null;
 
-        const postData = JSON.parse(data.text());
+        const postData = JSON.parse(data as string);
         return {
           metadata: {
             title: postData.title,
