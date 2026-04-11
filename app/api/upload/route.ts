@@ -1,33 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-
-async function verifyAuth(request: NextRequest): Promise<boolean> {
-  try {
-    // Check if in development mode (for local testing)
-    if (process.env.NODE_ENV === 'development') {
-      const authHeader = request.headers.get('authorization');
-      return !!authHeader?.startsWith('Bearer ');
-    }
-
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Auth verification error:', error);
-    return false;
-  }
-}
+import { verifyAdminAuth } from '@/lib/serverAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    const isAuthorized = await verifyAuth(request);
-    if (!isAuthorized) {
+    const authResult = await verifyAdminAuth(request);
+    if (!authResult.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized - Authentication required' },
-        { status: 401 }
+        { error: authResult.error },
+        { status: authResult.status }
       );
     }
 

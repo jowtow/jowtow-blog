@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getStore } from '@netlify/blobs';
+import { verifyAdminAuth } from '@/lib/serverAuth';
 
 function revalidatePostPaths(slugs: string[]) {
   revalidatePath('/');
@@ -11,36 +12,13 @@ function revalidatePostPaths(slugs: string[]) {
   }
 }
 
-async function verifyAuth(request: NextRequest): Promise<boolean> {
-  try {
-    // Check if in development mode (for local testing)
-    if (process.env.NODE_ENV === 'development') {
-      // In development, just check for presence of auth header
-      const authHeader = request.headers.get('authorization');
-      return !!authHeader?.startsWith('Bearer ');
-    }
-
-    // In production on Netlify, the identity context is available
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return false;
-    }
-
-    // Token exists and has Bearer prefix
-    return true;
-  } catch (error) {
-    console.error('Auth verification error:', error);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const isAuthorized = await verifyAuth(request);
-    if (!isAuthorized) {
+    const authResult = await verifyAdminAuth(request);
+    if (!authResult.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized - Authentication required' },
-        { status: 401 }
+        { error: authResult.error },
+        { status: authResult.status }
       );
     }
 
@@ -121,11 +99,11 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const isAuthorized = await verifyAuth(request);
-    if (!isAuthorized) {
+    const authResult = await verifyAdminAuth(request);
+    if (!authResult.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized - Authentication required' },
-        { status: 401 }
+        { error: authResult.error },
+        { status: authResult.status }
       );
     }
 
@@ -198,11 +176,11 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const isAuthorized = await verifyAuth(request);
-    if (!isAuthorized) {
+    const authResult = await verifyAdminAuth(request);
+    if (!authResult.ok) {
       return NextResponse.json(
-        { error: 'Unauthorized - Authentication required' },
-        { status: 401 }
+        { error: authResult.error },
+        { status: authResult.status }
       );
     }
 

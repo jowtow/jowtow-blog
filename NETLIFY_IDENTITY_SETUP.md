@@ -64,6 +64,27 @@ git push
 
 Your site will deploy with Netlify Identity enabled.
 
+### 6. Configure Server-Side Admin Allowlist
+
+Set one of these environment variables in Netlify:
+
+- `ADMIN_ALLOWED_EMAILS`: comma-separated list of allowed admin emails
+- `ADMIN_EMAIL`: single allowed admin email
+
+Example:
+
+```bash
+ADMIN_ALLOWED_EMAILS=you@example.com
+```
+
+Optional but recommended:
+
+```bash
+SITE_URL=https://your-site.netlify.app
+```
+
+This is used by the API routes to verify identity tokens server-side against Netlify Identity and ensure only your allowlisted email can create, edit, upload, or delete content.
+
 ## Using the Admin Dashboard
 
 - **Login**: Visit `/admin/login` and click the login button
@@ -123,7 +144,7 @@ export default function AdminFeature() {
 
 ## Security Notes
 
-- All authentication happens through Netlify's secure servers
-- Tokens are stored securely by the Netlify Identity widget
-- The admin routes are protected client-side (you may want to add server-side validation for truly sensitive operations)
-- Never commit credentials or API keys to your repository
+- All admin write operations are validated server-side against Netlify Identity.
+- API writes also require the authenticated user's email to match your configured admin allowlist.
+- The client-side admin guard improves UX, but API authorization is the real protection.
+- Never commit credentials or API keys to your repository.
