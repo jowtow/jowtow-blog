@@ -1,6 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
 
+function inferImageMimeType(filename: string): string {
+  const extension = filename.split('.').pop()?.toLowerCase();
+
+  switch (extension) {
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'avif':
+      return 'image/avif';
+    case 'svg':
+      return 'image/svg+xml';
+    case 'jpg':
+    case 'jpeg':
+    default:
+      return 'image/jpeg';
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -26,7 +47,7 @@ export async function GET(
       );
     }
 
-    const contentType = (file.metadata?.mimeType as string) || 'application/octet-stream';
+    const contentType = (file.metadata?.mimeType as string) || inferImageMimeType(filename);
     const uint8Array = new Uint8Array(file.data);
 
     return new NextResponse(uint8Array, {

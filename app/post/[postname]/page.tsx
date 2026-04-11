@@ -46,6 +46,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
             alt={post.metadata.title}
             fill
             priority
+            unoptimized={post.metadata.image.startsWith('/api/images/')}
           />
         ) : (
           <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />

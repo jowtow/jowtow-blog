@@ -29,6 +29,7 @@ export default function PostList({ posts }: { posts: Post[] }) {
                           src={post.metadata.image}
                           alt={post.metadata.title}
                           fill
+                          unoptimized={post.metadata.image.startsWith('/api/images/')}
                         />
                       ) : (
                         <div className="h-full w-full rounded-tl rounded-tr bg-[var(--color-light)] flex items-center justify-center text-[0.9rem] text-[var(--color-dark)]">
