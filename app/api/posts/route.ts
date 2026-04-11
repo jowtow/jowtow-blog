@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getStore } from '@netlify/blobs';
 
 async function verifyAuth(request: NextRequest): Promise<boolean> {
@@ -71,6 +72,10 @@ export async function POST(request: NextRequest) {
         date: postData.date,
       },
     });
+
+    // Revalidate the posts page cache so new post appears
+    revalidatePath('/posts');
+    revalidatePath('/');
 
     return NextResponse.json(
       { success: true, slug, data: postData },
