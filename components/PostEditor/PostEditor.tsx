@@ -6,10 +6,34 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 interface PostEditorProps {
+  mode?: 'create' | 'edit';
+  initialPost?: {
+    title: string;
+    slug: string;
+    markdown: string;
+    image: string;
+    author?: string;
+    date?: string;
+  } | null;
   onSuccess?: () => void;
+  onDelete?: () => void;
+  onCancel?: () => void;
 }
 
-export default function PostEditor({ onSuccess }: PostEditorProps) {
+const emptyFormData = {
+  title: '',
+  slug: '',
+  markdown: '',
+  image: '',
+};
+
+export default function PostEditor({
+  mode = 'create',
+  initialPost = null,
+  onSuccess,
+  onDelete,
+  onCancel,
+}: PostEditorProps) {
   const { user } = useAuthStore();
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const markdownFileInputRef = useRef<HTMLInputElement>(null);
@@ -33,19 +57,37 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
     getToken();
   }, [user]);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    markdown: '',
-    image: '',
-  });
+  const [formData, setFormData] = useState(emptyFormData);
 
   const [preview, setPreview] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingMarkdownImage, setUploadingMarkdownImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (initialPost) {
+      setFormData({
+        title: initialPost.title,
+        slug: initialPost.slug,
+        markdown: initialPost.markdown,
+        image: initialPost.image || '',
+      });
+      setPreview(false);
+      setError(null);
+      setSuccess(false);
+      return;
+    }
+
+    if (mode === 'create') {
+      setFormData(emptyFormData);
+      setPreview(false);
+      setError(null);
+      setSuccess(false);
+    }
+  }, [initialPost, mode]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -177,15 +219,17 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
       }
 
       const response = await fetch('/api/posts', {
-        method: 'POST',
+        method: mode === 'edit' ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           ...formData,
-          author: user?.user_metadata?.full_name || user?.email || 'Guest',
-          date: new Date().toISOString().split('T')[0],
+          originalSlug: initialPost?.slug,
+          author:
+            initialPost?.author || user?.user_metadata?.full_name || user?.email || 'Guest',
+          date: initialPost?.date || new Date().toISOString().split('T')[0],
         }),
       });
 
@@ -195,12 +239,11 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
       }
 
       setSuccess(true);
-      setFormData({
-        title: '',
-        slug: '',
-        markdown: '',
-        image: '',
-      });
+
+      if (mode === 'create') {
+        setFormData(emptyFormData);
+      }
+
       onSuccess?.();
 
       setTimeout(() => setSuccess(false), 3000);
@@ -211,11 +254,58 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!initialPost?.slug) {
+      setError('No post selected for deletion');
+      return;
+    }
+
+    if (!authToken) {
+      setError('Authentication token not available. Please refresh the page.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete post "${initialPost.title}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/posts?slug=${encodeURIComponent(initialPost.slug)}`, {
+        method: 'DELETE',
+        headers: {
+          authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete post');
+      }
+
+      setSuccess(false);
+      onDelete?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete post');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 text-[var(--text-light)]">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">Create New Post</h2>
-        <p className="text-[var(--text-light)]/70">Write and preview posts with inline markdown images.</p>
+        <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">
+          {mode === 'edit' ? 'Edit Post' : 'Create New Post'}
+        </h2>
+        <p className="text-[var(--text-light)]/70">
+          {mode === 'edit'
+            ? 'Update or remove an existing dynamic post.'
+            : 'Write and preview posts with inline markdown images.'}
+        </p>
       </div>
 
       {error && (
@@ -226,7 +316,7 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
 
       {success && (
         <div className="mb-4 p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/40 rounded text-[var(--color-primary)]">
-          ✓ Post created successfully!
+          ✓ {mode === 'edit' ? 'Post updated successfully!' : 'Post created successfully!'}
         </div>
       )}
 
@@ -377,22 +467,45 @@ export default function PostEditor({ onSuccess }: PostEditorProps) {
             disabled={submitting}
             className="px-6 py-2 bg-[var(--color-primary)] hover:brightness-95 disabled:opacity-60 text-[var(--text-color-dark)] font-semibold rounded-lg cursor-pointer transition"
           >
-            {submitting ? 'Creating...' : 'Create Post'}
+            {submitting ? (mode === 'edit' ? 'Saving...' : 'Creating...') : mode === 'edit' ? 'Save Changes' : 'Create Post'}
           </button>
           <button
             type="button"
             onClick={() =>
-              setFormData({
-                title: '',
-                slug: '',
-                markdown: '',
-                image: '',
-              })
+              setFormData(
+                initialPost
+                  ? {
+                      title: initialPost.title,
+                      slug: initialPost.slug,
+                      markdown: initialPost.markdown,
+                      image: initialPost.image || '',
+                    }
+                  : emptyFormData
+              )
             }
             className="px-6 py-2 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/50 text-[var(--text-light)] font-medium rounded-lg cursor-pointer transition"
           >
-            Clear
+            {mode === 'edit' ? 'Reset' : 'Clear'}
           </button>
+          {mode === 'edit' && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-6 py-2 border border-red-400/50 bg-red-500/15 hover:bg-red-500/25 disabled:opacity-60 text-red-200 font-medium rounded-lg cursor-pointer transition"
+            >
+              {deleting ? 'Deleting...' : 'Delete Post'}
+            </button>
+          )}
+          {mode === 'edit' && onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/50 text-[var(--text-light)] font-medium rounded-lg cursor-pointer transition"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </form>
     </div>

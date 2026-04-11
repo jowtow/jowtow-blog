@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getStore } from '@netlify/blobs';
 
+function revalidatePostPaths(slugs: string[]) {
+  revalidatePath('/');
+  revalidatePath('/posts');
+
+  for (const slug of slugs) {
+    revalidatePath(`/post/${slug}`);
+  }
+}
+
 async function verifyAuth(request: NextRequest): Promise<boolean> {
   try {
     // Check if in development mode (for local testing)
@@ -73,9 +82,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Revalidate the posts page cache so new post appears
-    revalidatePath('/posts');
-    revalidatePath('/');
+    revalidatePostPaths([slug]);
 
     return NextResponse.json(
       { success: true, slug, data: postData },
@@ -107,6 +114,125 @@ export async function GET() {
     console.error('Error fetching posts:', error);
     return NextResponse.json(
       { error: 'Failed to fetch posts' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const isAuthorized = await verifyAuth(request);
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { originalSlug, title, slug, markdown, image, author, date } = body;
+
+    if (!originalSlug || !title || !slug || !markdown) {
+      return NextResponse.json(
+        { error: 'Missing required fields: originalSlug, title, slug, markdown' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return NextResponse.json(
+        { error: 'Slug must contain only lowercase letters, numbers, and hyphens' },
+        { status: 400 }
+      );
+    }
+
+    const store = getStore('posts');
+    const existingData = await store.get(`${originalSlug}.json`);
+
+    if (!existingData) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    const existingPost = JSON.parse(existingData as string);
+
+    const postData = {
+      ...existingPost,
+      title,
+      slug,
+      markdown,
+      image: image || '',
+      author: author || existingPost.author || 'Guest',
+      date: date || existingPost.date || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await store.set(`${slug}.json`, JSON.stringify(postData), {
+      metadata: {
+        title,
+        slug,
+        date: postData.date,
+      },
+    });
+
+    if (slug !== originalSlug) {
+      await store.delete(`${originalSlug}.json`);
+    }
+
+    revalidatePostPaths([originalSlug, slug]);
+
+    return NextResponse.json(
+      { success: true, slug, data: postData },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error updating post:', error);
+    return NextResponse.json(
+      { error: 'Failed to update post', details: error instanceof Error ? error.message : undefined },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const isAuthorized = await verifyAuth(request);
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const slug = request.nextUrl.searchParams.get('slug');
+
+    if (!slug) {
+      return NextResponse.json(
+        { error: 'Missing required slug parameter' },
+        { status: 400 }
+      );
+    }
+
+    const store = getStore('posts');
+    const existingData = await store.get(`${slug}.json`);
+
+    if (!existingData) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    await store.delete(`${slug}.json`);
+    revalidatePostPaths([slug]);
+
+    return NextResponse.json({ success: true, slug }, { status: 200 });
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete post', details: error instanceof Error ? error.message : undefined },
       { status: 500 }
     );
   }
