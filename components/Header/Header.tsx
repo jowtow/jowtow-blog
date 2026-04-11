@@ -20,6 +20,9 @@ export default function Header() {
             <Link href="/posts" className="m-3">
               posts
             </Link>
+            <Link href="/collections" className="m-3">
+              collections
+            </Link>
             <Link href="/music" className="m-3">
               music
             </Link>
