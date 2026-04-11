@@ -27,10 +27,19 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
-    const { filename } = await params;
+    const { filename: rawFilename } = await params;
+    const filename = decodeURIComponent(rawFilename);
 
     // Validate filename format
-    if (!filename || !/^[\d-a-z.]+$/.test(filename)) {
+    if (
+      !filename ||
+      filename === '.' ||
+      filename === '..' ||
+      filename.includes('/') ||
+      filename.includes('\\') ||
+      filename.includes('..') ||
+      filename.includes('\0')
+    ) {
       return NextResponse.json(
         { error: 'Invalid filename format' },
         { status: 400 }
