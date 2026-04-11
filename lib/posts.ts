@@ -175,23 +175,50 @@ async function getSubdirectories(dirPath: string) {
 }
 
 export async function getPostBySlug(slug: string): Promise<Post> {
-  const postsDirectory = path.join(process.cwd(), "posts");
+  // First try to find in static posts
+  try {
+    const postsDirectory = path.join(process.cwd(), "posts");
+    const fileNames = fs.readdirSync(postsDirectory);
+    const markdownFiles = fileNames.filter((name) => name.startsWith(slug));
 
-  const fileNames = fs.readdirSync(postsDirectory);
-  const markdownFiles = fileNames.filter((name) => name.startsWith(slug));
+    if (markdownFiles.length > 0) {
+      const fullPath = path.join(postsDirectory, markdownFiles[0]);
+      const fileContents = fs.readFileSync(fullPath, "utf8");
+      const document = matter(fileContents);
 
-  console.log(slug);
-  console.log(markdownFiles);
-  console.log(postsDirectory);
-  const fullPath = path.join(postsDirectory, markdownFiles[0]);
-  const fileContents = fs.readFileSync(fullPath, "utf8");
-  const document = matter(fileContents);
+      return {
+        metadata: document.data as PostMetadata,
+        markdownBody: document.content,
+        slug,
+      };
+    }
+  } catch (error) {
+    console.warn(`Could not find static post with slug: ${slug}`, error);
+  }
 
-  return {
-    metadata: document.data as PostMetadata,
-    markdownBody: document.content,
-    slug,
-  };
+  // If not found in static posts, try Netlify Blobs
+  try {
+    const store = getStore("posts");
+    const data = await store.get(`${slug}.json`);
+    
+    if (data) {
+      const postData = JSON.parse(data as string);
+      return {
+        metadata: {
+          title: postData.title,
+          image: postData.image,
+          author: postData.author,
+          date: postData.date,
+        },
+        markdownBody: postData.markdown,
+        slug: postData.slug,
+      } as Post;
+    }
+  } catch (error) {
+    console.warn(`Could not find dynamic post with slug: ${slug}`, error);
+  }
+
+  throw new Error(`Post with slug "${slug}" not found`);
 }
 
 export async function getPostBySlugAndSeries(
