@@ -17,37 +17,17 @@ export async function GET(
     }
 
     const store = getStore('images');
-    const file = await store.get(filename);
+    const file = await store.getWithMetadata(filename, { type: 'arrayBuffer' });
 
-    if (!file) {
+    if (!file || !file.data) {
       return NextResponse.json(
         { error: 'Image not found' },
         { status: 404 }
       );
     }
 
-    // Get metadata to determine content type if available
-    let contentType = 'image/jpeg';
-    let imageBuffer: ArrayBuffer;
-
-    // Handle Netlify Blob response - cast to any to work with the dynamic type
-    const blobData = file as any;
-    
-    if (typeof blobData === 'string') {
-      // If it's a string, convert to buffer (this shouldn't happen for images)
-      imageBuffer = new TextEncoder().encode(blobData).buffer;
-    } else if (blobData.arrayBuffer && typeof blobData.arrayBuffer === 'function') {
-      // It's a Blob or Blob-like object
-      contentType = blobData.type || 'image/jpeg';
-      imageBuffer = await blobData.arrayBuffer();
-    } else if (blobData.buffer) {
-      // It might be a Buffer or typed array
-      imageBuffer = blobData.buffer;
-    } else {
-      throw new Error('Unable to convert file to ArrayBuffer: unsupported type');
-    }
-
-    const uint8Array = new Uint8Array(imageBuffer);
+    const contentType = (file.metadata?.mimeType as string) || 'application/octet-stream';
+    const uint8Array = new Uint8Array(file.data);
 
     return new NextResponse(uint8Array, {
       headers: {

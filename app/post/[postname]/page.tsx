@@ -39,13 +39,17 @@ export default async function BlogPost({ params }: { params: PostParam }) {
             {post.metadata.date}
           </p>
         </div>
-        <Image
-          className="absolute inset-0 object-cover z-0"
-          src={post.metadata.image}
-          alt={post.metadata.title}
-          fill
-          priority
-        />
+        {post.metadata.image ? (
+          <Image
+            className="absolute inset-0 object-cover z-0"
+            src={post.metadata.image}
+            alt={post.metadata.title}
+            fill
+            priority
+          />
+        ) : (
+          <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />
+        )}
       </div>
       <article
         className={`${styles.jowtowarticle} m-3 p-2 flex flex-col border-t-2 border-[var(--color-primary)]`}

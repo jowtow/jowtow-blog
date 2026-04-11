@@ -2,6 +2,8 @@ import PostList from "@/components/PostList/PostList";
 import SeriesList from "@/components/SeriesList/SeriesList";
 import { getPosts, getSeries } from "@/lib/posts";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const posts = await getPosts();
   const series = await getSeries();

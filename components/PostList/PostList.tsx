@@ -23,12 +23,18 @@ export default function PostList({ posts }: { posts: Post[] }) {
                     className="flex flex-col align-center justify-between w-[300px]"
                   >
                     <div className="relative h-[175px]">
-                      <Image
-                        className="rounded-tl rounded-tr object-cover"
-                        src={post.metadata.image}
-                        alt="Picture of the author."
-                        fill
-                      />
+                      {post.metadata.image ? (
+                        <Image
+                          className="rounded-tl rounded-tr object-cover"
+                          src={post.metadata.image}
+                          alt={post.metadata.title}
+                          fill
+                        />
+                      ) : (
+                        <div className="h-full w-full rounded-tl rounded-tr bg-[var(--color-light)] flex items-center justify-center text-[0.9rem] text-[var(--color-dark)]">
+                          No cover image
+                        </div>
+                      )}
                     </div>
                     <div className="flex justify-around items-center no-underline italic border-t-[var(--primary)] border-t-3">
                       <span className="text-start font-bold mx-2 text-[1.2em]">
