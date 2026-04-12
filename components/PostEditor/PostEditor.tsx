@@ -66,6 +66,20 @@ export default function PostEditor({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const isLocalBypassEnabled =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== 'false';
+
+  const getAuthHeaders = (): Record<string, string> => {
+    if (authToken) {
+      return {
+        authorization: `Bearer ${authToken}`,
+      };
+    }
+
+    return {};
+  };
 
   useEffect(() => {
     if (initialPost) {
@@ -115,7 +129,7 @@ export default function PostEditor({
   };
 
   const uploadImageFile = async (file: File) => {
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       throw new Error('Authentication token not available. Please refresh the page.');
     }
 
@@ -124,9 +138,7 @@ export default function PostEditor({
 
     const response = await fetch('/api/upload', {
       method: 'POST',
-      headers: {
-        authorization: `Bearer ${authToken}`,
-      },
+      headers: getAuthHeaders(),
       body: formDataToSend,
     });
 
@@ -207,7 +219,7 @@ export default function PostEditor({
     setSubmitting(true);
     setError(null);
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       setSubmitting(false);
       return;
@@ -222,7 +234,7 @@ export default function PostEditor({
         method: mode === 'edit' ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authorization: `Bearer ${authToken}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...formData,
@@ -260,7 +272,7 @@ export default function PostEditor({
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -276,9 +288,7 @@ export default function PostEditor({
     try {
       const response = await fetch(`/api/posts?slug=${encodeURIComponent(initialPost.slug)}`, {
         method: 'DELETE',
-        headers: {
-          authorization: `Bearer ${authToken}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {

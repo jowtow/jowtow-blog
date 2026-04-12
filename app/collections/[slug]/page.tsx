@@ -32,7 +32,7 @@ export default async function CollectionPage({
 
   return (
     <>
-      <div className="relative h-64 overflow-hidden flex flex-col-reverse">
+      <div className="relative h-64 overflow-visible flex flex-col-reverse">
         <div className="relative z-10 bg-[var(--color-dark)] mx-auto p-2 rounded-t-lg opacity-[0.8]">
           <h1 className="text-center m-[0px] text-[1.3rem] text-[var(--color-primary)] z-1">
             {collection.metadata.name}
@@ -54,14 +54,14 @@ export default async function CollectionPage({
         )}
       </div>
 
-      <div className="w-full border-t-2 border-[var(--color-primary)] mt-3 pt-4 px-2">
+      <CollectionCarousel items={carouselItems} />
+
+      <div className="w-full border-t-2 border-[var(--color-primary)] mt-0 pt-4 px-2">
         {collection.metadata.description && (
           <p className="text-center text-[var(--text-light)]/70 mb-6 max-w-[60ch] mx-auto">
             {collection.metadata.description}
           </p>
         )}
-
-        <CollectionCarousel items={carouselItems} />
       </div>
     </>
   );

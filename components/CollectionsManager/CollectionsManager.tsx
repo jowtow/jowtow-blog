@@ -67,6 +67,20 @@ export default function CollectionsManager() {
   const itemCoverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const itemTextAreaRef = useRef<HTMLTextAreaElement>(null);
+  const isLocalBypassEnabled =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== 'false';
+
+  const getAuthHeaders = (): Record<string, string> => {
+    if (authToken) {
+      return {
+        authorization: `Bearer ${authToken}`,
+      };
+    }
+
+    return {};
+  };
 
   useEffect(() => {
     const getToken = () => {
@@ -130,7 +144,7 @@ export default function CollectionsManager() {
       .replace(/-+/g, '-');
 
   const uploadImageFile = async (file: File) => {
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       throw new Error('Authentication token not available. Please refresh the page.');
     }
 
@@ -139,9 +153,7 @@ export default function CollectionsManager() {
 
     const response = await fetch('/api/upload', {
       method: 'POST',
-      headers: {
-        authorization: `Bearer ${authToken}`,
-      },
+      headers: getAuthHeaders(),
       body: formData,
     });
 
@@ -284,7 +296,7 @@ export default function CollectionsManager() {
   const handleCollectionSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -302,7 +314,7 @@ export default function CollectionsManager() {
         method: selectedCollectionSlug ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authorization: `Bearer ${authToken}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...collectionForm,
@@ -333,7 +345,7 @@ export default function CollectionsManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -350,9 +362,7 @@ export default function CollectionsManager() {
     try {
       const response = await fetch(`/api/collections?slug=${encodeURIComponent(selectedCollectionSlug)}`, {
         method: 'DELETE',
-        headers: {
-          authorization: `Bearer ${authToken}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -379,7 +389,7 @@ export default function CollectionsManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -397,7 +407,7 @@ export default function CollectionsManager() {
         method: selectedItemSlug ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authorization: `Bearer ${authToken}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...itemForm,
@@ -431,7 +441,7 @@ export default function CollectionsManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -450,9 +460,7 @@ export default function CollectionsManager() {
         `/api/collections/${encodeURIComponent(collectionSlug)}/items?slug=${encodeURIComponent(selectedItemSlug)}`,
         {
           method: 'DELETE',
-          headers: {
-            authorization: `Bearer ${authToken}`,
-          },
+          headers: getAuthHeaders(),
         }
       );
 

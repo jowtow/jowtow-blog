@@ -71,6 +71,20 @@ export default function SeriesManager() {
   const entryCoverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const entryTextAreaRef = useRef<HTMLTextAreaElement>(null);
+  const isLocalBypassEnabled =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== 'false';
+
+  const getAuthHeaders = (): Record<string, string> => {
+    if (authToken) {
+      return {
+        authorization: `Bearer ${authToken}`,
+      };
+    }
+
+    return {};
+  };
 
   useEffect(() => {
     const getToken = () => {
@@ -134,7 +148,7 @@ export default function SeriesManager() {
       .replace(/-+/g, '-');
 
   const uploadImageFile = async (file: File) => {
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       throw new Error('Authentication token not available. Please refresh the page.');
     }
 
@@ -143,9 +157,7 @@ export default function SeriesManager() {
 
     const response = await fetch('/api/upload', {
       method: 'POST',
-      headers: {
-        authorization: `Bearer ${authToken}`,
-      },
+      headers: getAuthHeaders(),
       body: formData,
     });
 
@@ -293,7 +305,7 @@ export default function SeriesManager() {
   const handleSeriesSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setSeriesError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -311,7 +323,7 @@ export default function SeriesManager() {
         method: selectedSeriesSlug ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authorization: `Bearer ${authToken}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...seriesForm,
@@ -342,7 +354,7 @@ export default function SeriesManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setSeriesError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -359,9 +371,7 @@ export default function SeriesManager() {
     try {
       const response = await fetch(`/api/series?slug=${encodeURIComponent(selectedSeriesSlug)}`, {
         method: 'DELETE',
-        headers: {
-          authorization: `Bearer ${authToken}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -388,7 +398,7 @@ export default function SeriesManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setSeriesError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -406,7 +416,7 @@ export default function SeriesManager() {
         method: selectedEntrySlug ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          authorization: `Bearer ${authToken}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...entryForm,
@@ -441,7 +451,7 @@ export default function SeriesManager() {
       return;
     }
 
-    if (!authToken) {
+    if (!authToken && !isLocalBypassEnabled) {
       setSeriesError('Authentication token not available. Please refresh the page.');
       return;
     }
@@ -460,9 +470,7 @@ export default function SeriesManager() {
         `/api/series/${encodeURIComponent(seriesSlug)}/posts?slug=${encodeURIComponent(selectedEntrySlug)}`,
         {
           method: 'DELETE',
-          headers: {
-            authorization: `Bearer ${authToken}`,
-          },
+          headers: getAuthHeaders(),
         }
       );
 
