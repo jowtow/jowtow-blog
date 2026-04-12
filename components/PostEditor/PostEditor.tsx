@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { useAuthStore } from '@/lib/auth';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useState, useRef, useEffect } from "react";
+import { useAuthStore } from "@/lib/auth";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface PostEditorProps {
-  mode?: 'create' | 'edit';
+  mode?: "create" | "edit";
   initialPost?: {
     title: string;
     slug: string;
@@ -21,14 +21,14 @@ interface PostEditorProps {
 }
 
 const emptyFormData = {
-  title: '',
-  slug: '',
-  markdown: '',
-  image: '',
+  title: "",
+  slug: "",
+  markdown: "",
+  image: "",
 };
 
 export default function PostEditor({
-  mode = 'create',
+  mode = "create",
   initialPost = null,
   onSuccess,
   onDelete,
@@ -49,7 +49,7 @@ export default function PostEditor({
           const token = netlifyIdentity.currentUser().token.access_token;
           setAuthToken(token);
         } catch (error) {
-          console.error('Failed to get token:', error);
+          console.error("Failed to get token:", error);
         }
       }
     };
@@ -67,9 +67,10 @@ export default function PostEditor({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const isLocalBypassEnabled =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== 'false';
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1") &&
+    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== "false";
 
   const getAuthHeaders = (): Record<string, string> => {
     if (authToken) {
@@ -87,7 +88,7 @@ export default function PostEditor({
         title: initialPost.title,
         slug: initialPost.slug,
         markdown: initialPost.markdown,
-        image: initialPost.image || '',
+        image: initialPost.image || "",
       });
       setPreview(false);
       setError(null);
@@ -95,7 +96,7 @@ export default function PostEditor({
       return;
     }
 
-    if (mode === 'create') {
+    if (mode === "create") {
       setFormData(emptyFormData);
       setPreview(false);
       setError(null);
@@ -104,7 +105,7 @@ export default function PostEditor({
   }, [initialPost, mode]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -115,9 +116,9 @@ export default function PostEditor({
     return title
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-');
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,28 +131,32 @@ export default function PostEditor({
 
   const uploadImageFile = async (file: File) => {
     if (!authToken && !isLocalBypassEnabled) {
-      throw new Error('Authentication token not available. Please refresh the page.');
+      throw new Error(
+        "Authentication token not available. Please refresh the page.",
+      );
     }
 
     const formDataToSend = new FormData();
-    formDataToSend.append('file', file);
+    formDataToSend.append("file", file);
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
+    const response = await fetch("/api/upload", {
+      method: "POST",
       headers: getAuthHeaders(),
       body: formDataToSend,
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to upload image');
+      throw new Error(errorData.error || "Failed to upload image");
     }
 
     const data = await response.json();
     return data.url as string;
   };
 
-  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -163,10 +168,10 @@ export default function PostEditor({
       setFormData((prev) => ({ ...prev, image: url }));
       setSuccess(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setUploadingCover(false);
-      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+      if (coverFileInputRef.current) coverFileInputRef.current.value = "";
     }
   };
 
@@ -174,14 +179,19 @@ export default function PostEditor({
     const textarea = markdownTextAreaRef.current;
 
     if (!textarea) {
-      setFormData((prev) => ({ ...prev, markdown: `${prev.markdown}${insertion}` }));
+      setFormData((prev) => ({
+        ...prev,
+        markdown: `${prev.markdown}${insertion}`,
+      }));
       return;
     }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const nextValue =
-      formData.markdown.slice(0, start) + insertion + formData.markdown.slice(end);
+      formData.markdown.slice(0, start) +
+      insertion +
+      formData.markdown.slice(end);
 
     setFormData((prev) => ({ ...prev, markdown: nextValue }));
     setSuccess(false);
@@ -193,7 +203,9 @@ export default function PostEditor({
     });
   };
 
-  const handleMarkdownImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMarkdownImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -202,15 +214,15 @@ export default function PostEditor({
 
     try {
       const url = await uploadImageFile(file);
-      const altText = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+      const altText = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
       const markdownSnippet = `\n![${altText}](${url})\n`;
       insertAtCursor(markdownSnippet);
       setSuccess(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setUploadingMarkdownImage(false);
-      if (markdownFileInputRef.current) markdownFileInputRef.current.value = '';
+      if (markdownFileInputRef.current) markdownFileInputRef.current.value = "";
     }
   };
 
@@ -220,39 +232,42 @@ export default function PostEditor({
     setError(null);
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       setSubmitting(false);
       return;
     }
 
     try {
       if (!formData.title || !formData.slug || !formData.markdown) {
-        throw new Error('Please fill in all required fields');
+        throw new Error("Please fill in all required fields");
       }
 
-      const response = await fetch('/api/posts', {
-        method: mode === 'edit' ? 'PUT' : 'POST',
+      const response = await fetch("/api/posts", {
+        method: mode === "edit" ? "PUT" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
         body: JSON.stringify({
           ...formData,
           originalSlug: initialPost?.slug,
           author:
-            initialPost?.author || user?.user_metadata?.full_name || user?.email || 'Guest',
-          date: initialPost?.date || new Date().toISOString().split('T')[0],
+            initialPost?.author ||
+            user?.user_metadata?.full_name ||
+            user?.email ||
+            "Guest",
+          date: initialPost?.date || new Date().toISOString().split("T")[0],
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create post');
+        throw new Error(errorData.error || "Failed to create post");
       }
 
       setSuccess(true);
 
-      if (mode === 'create') {
+      if (mode === "create") {
         setFormData(emptyFormData);
       }
 
@@ -260,7 +275,7 @@ export default function PostEditor({
 
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -268,16 +283,18 @@ export default function PostEditor({
 
   const handleDelete = async () => {
     if (!initialPost?.slug) {
-      setError('No post selected for deletion');
+      setError("No post selected for deletion");
       return;
     }
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       return;
     }
 
-    const confirmed = window.confirm(`Delete post "${initialPost.title}"? This cannot be undone.`);
+    const confirmed = window.confirm(
+      `Delete post "${initialPost.title}"? This cannot be undone.`,
+    );
     if (!confirmed) {
       return;
     }
@@ -286,20 +303,23 @@ export default function PostEditor({
     setError(null);
 
     try {
-      const response = await fetch(`/api/posts?slug=${encodeURIComponent(initialPost.slug)}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `/api/posts?slug=${encodeURIComponent(initialPost.slug)}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete post');
+        throw new Error(errorData.error || "Failed to delete post");
       }
 
       setSuccess(false);
       onDelete?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete post');
+      setError(err instanceof Error ? err.message : "Failed to delete post");
     } finally {
       setDeleting(false);
     }
@@ -309,12 +329,12 @@ export default function PostEditor({
     <div className="max-w-4xl mx-auto py-8 text-[var(--text-light)]">
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">
-          {mode === 'edit' ? 'Edit Post' : 'Create New Post'}
+          {mode === "edit" ? "Edit Post" : "Create New Post"}
         </h2>
         <p className="text-[var(--text-light)]/70">
-          {mode === 'edit'
-            ? 'Update or remove an existing dynamic post.'
-            : 'Write and preview posts with inline markdown images.'}
+          {mode === "edit"
+            ? "Update or remove an existing dynamic post."
+            : "Write and preview posts with inline markdown images."}
         </p>
       </div>
 
@@ -326,11 +346,17 @@ export default function PostEditor({
 
       {success && (
         <div className="mb-4 p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/40 rounded text-[var(--color-primary)]">
-          ✓ {mode === 'edit' ? 'Post updated successfully!' : 'Post created successfully!'}
+          ✓{" "}
+          {mode === "edit"
+            ? "Post updated successfully!"
+            : "Post created successfully!"}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5"
+      >
         {/* Title */}
         <div>
           <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
@@ -368,7 +394,9 @@ export default function PostEditor({
 
         {/* Featured Image */}
         <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Cover Image</label>
+          <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+            Cover Image
+          </label>
           <div className="flex gap-4 items-start">
             <div className="flex-1">
               <input
@@ -380,7 +408,9 @@ export default function PostEditor({
                 className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
               />
               <p className="text-sm text-[var(--text-light)]/60 mt-1">
-                {uploadingCover ? 'Uploading cover image...' : 'Select an image to upload (max 5MB)'}
+                {uploadingCover
+                  ? "Uploading cover image..."
+                  : "Select an image to upload (max 5MB)"}
               </p>
             </div>
           </div>
@@ -394,7 +424,7 @@ export default function PostEditor({
               />
               <button
                 type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, image: '' }))}
+                onClick={() => setFormData((prev) => ({ ...prev, image: "" }))}
                 className="text-sm text-red-300 hover:text-red-200 mt-2 cursor-pointer"
               >
                 Remove image
@@ -416,14 +446,14 @@ export default function PostEditor({
                 disabled={uploadingMarkdownImage}
                 className="text-sm px-3 py-1 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/55 rounded cursor-pointer transition disabled:opacity-60"
               >
-                {uploadingMarkdownImage ? 'Uploading...' : 'Insert Photo'}
+                {uploadingMarkdownImage ? "Uploading..." : "Insert Photo"}
               </button>
               <button
                 type="button"
                 onClick={() => setPreview(!preview)}
                 className="text-sm px-3 py-1 bg-[var(--color-primary)] text-[var(--text-color-dark)] hover:brightness-95 rounded font-medium cursor-pointer"
               >
-                {preview ? 'Edit' : 'Preview'}
+                {preview ? "Edit" : "Preview"}
               </button>
             </div>
           </div>
@@ -466,7 +496,8 @@ export default function PostEditor({
           )}
 
           <p className="text-sm text-[var(--text-light)]/60 mt-2">
-            Supports GitHub Flavored Markdown. Use the Insert Photo button to upload and inject image markdown at the cursor.
+            Supports GitHub Flavored Markdown. Use the Insert Photo button to
+            upload and inject image markdown at the cursor.
           </p>
         </div>
 
@@ -477,7 +508,13 @@ export default function PostEditor({
             disabled={submitting}
             className="px-6 py-2 bg-[var(--color-primary)] hover:brightness-95 disabled:opacity-60 text-[var(--text-color-dark)] font-semibold rounded-lg cursor-pointer transition"
           >
-            {submitting ? (mode === 'edit' ? 'Saving...' : 'Creating...') : mode === 'edit' ? 'Save Changes' : 'Create Post'}
+            {submitting
+              ? mode === "edit"
+                ? "Saving..."
+                : "Creating..."
+              : mode === "edit"
+                ? "Save Changes"
+                : "Create Post"}
           </button>
           <button
             type="button"
@@ -488,26 +525,26 @@ export default function PostEditor({
                       title: initialPost.title,
                       slug: initialPost.slug,
                       markdown: initialPost.markdown,
-                      image: initialPost.image || '',
+                      image: initialPost.image || "",
                     }
-                  : emptyFormData
+                  : emptyFormData,
               )
             }
             className="px-6 py-2 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/50 text-[var(--text-light)] font-medium rounded-lg cursor-pointer transition"
           >
-            {mode === 'edit' ? 'Reset' : 'Clear'}
+            {mode === "edit" ? "Reset" : "Clear"}
           </button>
-          {mode === 'edit' && (
+          {mode === "edit" && (
             <button
               type="button"
               onClick={handleDelete}
               disabled={deleting}
               className="px-6 py-2 border border-red-400/50 bg-red-500/15 hover:bg-red-500/25 disabled:opacity-60 text-red-200 font-medium rounded-lg cursor-pointer transition"
             >
-              {deleting ? 'Deleting...' : 'Delete Post'}
+              {deleting ? "Deleting..." : "Delete Post"}
             </button>
           )}
-          {mode === 'edit' && onCancel && (
+          {mode === "edit" && onCancel && (
             <button
               type="button"
               onClick={onCancel}

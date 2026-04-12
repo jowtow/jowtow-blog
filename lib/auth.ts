@@ -45,7 +45,8 @@ export const initializeAuth = () => {
     useAuthStore.setState({
       user: {
         id: "local-dev-admin",
-        email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || "local-dev-admin@localhost",
+        email:
+          process.env.NEXT_PUBLIC_ADMIN_EMAIL || "local-dev-admin@localhost",
       },
       isAuthenticated: true,
       isLoading: false,

@@ -1,12 +1,12 @@
-import Image from 'next/image';
-import { getCollections, getCollectionBySlug } from '@/lib/collections';
-import CollectionCarousel from '@/components/CollectionCarousel/CollectionCarousel';
+import Image from "next/image";
+import { getCollections, getCollectionBySlug } from "@/lib/collections";
+import CollectionCarousel from "@/components/CollectionCarousel/CollectionCarousel";
 
 type CollectionParam = {
   slug: string;
 };
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const collections = await getCollections();
@@ -47,7 +47,7 @@ export default async function CollectionPage({
             src={collection.metadata.image}
             alt={collection.metadata.name}
             fill
-            unoptimized={collection.metadata.image.startsWith('/api/images/')}
+            unoptimized={collection.metadata.image.startsWith("/api/images/")}
           />
         ) : (
           <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />

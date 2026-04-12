@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useAuthStore } from '@/lib/auth';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/lib/auth";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type AdminCollectionMetadata = {
   slug: string;
@@ -28,20 +28,20 @@ type AdminCollection = {
 };
 
 const emptyCollectionForm: AdminCollectionMetadata = {
-  slug: '',
-  name: '',
-  description: '',
-  date: new Date().toISOString().split('T')[0],
-  image: '',
+  slug: "",
+  name: "",
+  description: "",
+  date: new Date().toISOString().split("T")[0],
+  image: "",
 };
 
 const emptyItemForm: AdminCollectionItem = {
-  collectionSlug: '',
-  slug: '',
-  title: '',
-  markdown: '',
-  image: '',
-  date: new Date().toISOString().split('T')[0],
+  collectionSlug: "",
+  slug: "",
+  title: "",
+  markdown: "",
+  image: "",
+  date: new Date().toISOString().split("T")[0],
 };
 
 export default function CollectionsManager() {
@@ -51,8 +51,11 @@ export default function CollectionsManager() {
   const [loadingCollections, setLoadingCollections] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<string | null>(null);
-  const [collectionForm, setCollectionForm] = useState<AdminCollectionMetadata>(emptyCollectionForm);
+  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<
+    string | null
+  >(null);
+  const [collectionForm, setCollectionForm] =
+    useState<AdminCollectionMetadata>(emptyCollectionForm);
   const [collectionSubmitting, setCollectionSubmitting] = useState(false);
   const [collectionDeleting, setCollectionDeleting] = useState(false);
   const [itemForm, setItemForm] = useState<AdminCollectionItem>(emptyItemForm);
@@ -60,7 +63,8 @@ export default function CollectionsManager() {
   const [itemDeleting, setItemDeleting] = useState(false);
   const [itemPreview, setItemPreview] = useState(false);
   const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
-  const [uploadingCollectionImage, setUploadingCollectionImage] = useState(false);
+  const [uploadingCollectionImage, setUploadingCollectionImage] =
+    useState(false);
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
   const collectionCoverInputRef = useRef<HTMLInputElement>(null);
@@ -68,9 +72,10 @@ export default function CollectionsManager() {
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const itemTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const isLocalBypassEnabled =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== 'false';
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1") &&
+    process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== "false";
 
   const getAuthHeaders = (): Record<string, string> => {
     if (authToken) {
@@ -84,13 +89,19 @@ export default function CollectionsManager() {
 
   useEffect(() => {
     const getToken = () => {
-      const netlifyIdentity = (window as Window & { netlifyIdentity?: { currentUser?: () => { token: { access_token: string } } } }).netlifyIdentity;
+      const netlifyIdentity = (
+        window as Window & {
+          netlifyIdentity?: {
+            currentUser?: () => { token: { access_token: string } };
+          };
+        }
+      ).netlifyIdentity;
       if (netlifyIdentity?.currentUser?.()) {
         try {
           const token = netlifyIdentity.currentUser().token.access_token;
           setAuthToken(token);
         } catch (err) {
-          console.error('Failed to get token:', err);
+          console.error("Failed to get token:", err);
         }
       }
     };
@@ -103,13 +114,15 @@ export default function CollectionsManager() {
     setError(null);
 
     try {
-      const response = await fetch('/api/collections');
+      const response = await fetch("/api/collections");
       if (!response.ok) {
-        throw new Error('Failed to load collections');
+        throw new Error("Failed to load collections");
       }
 
       const data = (await response.json()) as AdminCollection[];
-      const sorted = data.sort((a, b) => Date.parse(b.metadata.date) - Date.parse(a.metadata.date));
+      const sorted = data.sort(
+        (a, b) => Date.parse(b.metadata.date) - Date.parse(a.metadata.date),
+      );
 
       setCollectionsList(sorted);
 
@@ -125,7 +138,9 @@ export default function CollectionsManager() {
         startNewCollection();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load collections');
+      setError(
+        err instanceof Error ? err.message : "Failed to load collections",
+      );
     } finally {
       setLoadingCollections(false);
     }
@@ -139,27 +154,29 @@ export default function CollectionsManager() {
     value
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-');
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
 
   const uploadImageFile = async (file: File) => {
     if (!authToken && !isLocalBypassEnabled) {
-      throw new Error('Authentication token not available. Please refresh the page.');
+      throw new Error(
+        "Authentication token not available. Please refresh the page.",
+      );
     }
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
+    const response = await fetch("/api/upload", {
+      method: "POST",
       headers: getAuthHeaders(),
       body: formData,
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to upload image');
+      throw new Error(errorData.error || "Failed to upload image");
     }
 
     const data = await response.json();
@@ -191,7 +208,7 @@ export default function CollectionsManager() {
 
   const startNewItem = () => {
     if (!selectedCollectionSlug && !collectionForm.slug) {
-      setError('Save the collection before adding items to it.');
+      setError("Save the collection before adding items to it.");
       return;
     }
 
@@ -217,13 +234,19 @@ export default function CollectionsManager() {
     const textarea = itemTextAreaRef.current;
 
     if (!textarea) {
-      setItemForm((prev) => ({ ...prev, markdown: `${prev.markdown}${insertion}` }));
+      setItemForm((prev) => ({
+        ...prev,
+        markdown: `${prev.markdown}${insertion}`,
+      }));
       return;
     }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const nextMarkdown = itemForm.markdown.slice(0, start) + insertion + itemForm.markdown.slice(end);
+    const nextMarkdown =
+      itemForm.markdown.slice(0, start) +
+      insertion +
+      itemForm.markdown.slice(end);
 
     setItemForm((prev) => ({ ...prev, markdown: nextMarkdown }));
 
@@ -234,7 +257,9 @@ export default function CollectionsManager() {
     });
   };
 
-  const handleCollectionImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCollectionImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -245,14 +270,17 @@ export default function CollectionsManager() {
       const url = await uploadImageFile(file);
       setCollectionForm((prev) => ({ ...prev, image: url }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setUploadingCollectionImage(false);
-      if (collectionCoverInputRef.current) collectionCoverInputRef.current.value = '';
+      if (collectionCoverInputRef.current)
+        collectionCoverInputRef.current.value = "";
     }
   };
 
-  const handleItemImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleItemImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -263,14 +291,16 @@ export default function CollectionsManager() {
       const url = await uploadImageFile(file);
       setItemForm((prev) => ({ ...prev, image: url }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setUploadingItemImage(false);
-      if (itemCoverInputRef.current) itemCoverInputRef.current.value = '';
+      if (itemCoverInputRef.current) itemCoverInputRef.current.value = "";
     }
   };
 
-  const handleInlineImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInlineImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -279,25 +309,27 @@ export default function CollectionsManager() {
 
     try {
       const url = await uploadImageFile(file);
-      const altText = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+      const altText = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
       insertInlineImage(`\n![${altText}](${url})\n`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : "Failed to upload image");
     } finally {
       setUploadingInlineImage(false);
-      if (inlineImageInputRef.current) inlineImageInputRef.current.value = '';
+      if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
     }
   };
 
   const currentCollection = selectedCollectionSlug
-    ? collectionsList.find((c) => c.metadata.slug === selectedCollectionSlug) ?? null
+    ? (collectionsList.find(
+        (c) => c.metadata.slug === selectedCollectionSlug,
+      ) ?? null)
     : null;
 
   const handleCollectionSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       return;
     }
 
@@ -306,14 +338,19 @@ export default function CollectionsManager() {
     setSuccess(null);
 
     try {
-      if (!collectionForm.name || !collectionForm.slug || !collectionForm.description || !collectionForm.date) {
-        throw new Error('Please fill in all required collection fields');
+      if (
+        !collectionForm.name ||
+        !collectionForm.slug ||
+        !collectionForm.description ||
+        !collectionForm.date
+      ) {
+        throw new Error("Please fill in all required collection fields");
       }
 
-      const response = await fetch('/api/collections', {
-        method: selectedCollectionSlug ? 'PUT' : 'POST',
+      const response = await fetch("/api/collections", {
+        method: selectedCollectionSlug ? "PUT" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
         body: JSON.stringify({
@@ -324,16 +361,22 @@ export default function CollectionsManager() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save collection');
+        throw new Error(errorData.error || "Failed to save collection");
       }
 
       const payload = await response.json();
       const savedSlug = payload.data.slug as string;
-      setSuccess(selectedCollectionSlug ? 'Collection updated successfully.' : 'Collection created successfully.');
+      setSuccess(
+        selectedCollectionSlug
+          ? "Collection updated successfully."
+          : "Collection created successfully.",
+      );
       setSelectedCollectionSlug(savedSlug);
       await loadCollections(savedSlug);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save collection');
+      setError(
+        err instanceof Error ? err.message : "Failed to save collection",
+      );
     } finally {
       setCollectionSubmitting(false);
     }
@@ -341,16 +384,18 @@ export default function CollectionsManager() {
 
   const handleCollectionDelete = async () => {
     if (!selectedCollectionSlug) {
-      setError('Select a collection to delete.');
+      setError("Select a collection to delete.");
       return;
     }
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       return;
     }
 
-    const confirmed = window.confirm(`Delete collection "${collectionForm.name}" and all its items? This cannot be undone.`);
+    const confirmed = window.confirm(
+      `Delete collection "${collectionForm.name}" and all its items? This cannot be undone.`,
+    );
     if (!confirmed) {
       return;
     }
@@ -360,21 +405,26 @@ export default function CollectionsManager() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/collections?slug=${encodeURIComponent(selectedCollectionSlug)}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(
+        `/api/collections?slug=${encodeURIComponent(selectedCollectionSlug)}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete collection');
+        throw new Error(errorData.error || "Failed to delete collection");
       }
 
       startNewCollection();
       await loadCollections(null);
-      setSuccess('Collection deleted successfully.');
+      setSuccess("Collection deleted successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete collection');
+      setError(
+        err instanceof Error ? err.message : "Failed to delete collection",
+      );
     } finally {
       setCollectionDeleting(false);
     }
@@ -385,12 +435,12 @@ export default function CollectionsManager() {
 
     const collectionSlug = selectedCollectionSlug || collectionForm.slug;
     if (!collectionSlug) {
-      setError('Save the collection before adding items to it.');
+      setError("Save the collection before adding items to it.");
       return;
     }
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       return;
     }
 
@@ -400,35 +450,46 @@ export default function CollectionsManager() {
 
     try {
       if (!itemForm.title || !itemForm.slug || !itemForm.date) {
-        throw new Error('Please fill in all required item fields (title, slug, date)');
+        throw new Error(
+          "Please fill in all required item fields (title, slug, date)",
+        );
       }
 
-      const response = await fetch(`/api/collections/${encodeURIComponent(collectionSlug)}/items`, {
-        method: selectedItemSlug ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
+      const response = await fetch(
+        `/api/collections/${encodeURIComponent(collectionSlug)}/items`,
+        {
+          method: selectedItemSlug ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            ...itemForm,
+            collectionSlug,
+            originalSlug: selectedItemSlug,
+          }),
         },
-        body: JSON.stringify({
-          ...itemForm,
-          collectionSlug,
-          originalSlug: selectedItemSlug,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save collection item');
+        throw new Error(errorData.error || "Failed to save collection item");
       }
 
       const payload = await response.json();
       const savedItem = payload.data as AdminCollectionItem;
-      setSuccess(selectedItemSlug ? 'Item updated successfully.' : 'Item created successfully.');
+      setSuccess(
+        selectedItemSlug
+          ? "Item updated successfully."
+          : "Item created successfully.",
+      );
       await loadCollections(collectionSlug);
       setSelectedItemSlug(savedItem.slug);
       setItemForm(savedItem);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save collection item');
+      setError(
+        err instanceof Error ? err.message : "Failed to save collection item",
+      );
     } finally {
       setItemSubmitting(false);
     }
@@ -437,16 +498,18 @@ export default function CollectionsManager() {
   const handleItemDelete = async () => {
     const collectionSlug = selectedCollectionSlug || collectionForm.slug;
     if (!collectionSlug || !selectedItemSlug) {
-      setError('Select an item to delete.');
+      setError("Select an item to delete.");
       return;
     }
 
     if (!authToken && !isLocalBypassEnabled) {
-      setError('Authentication token not available. Please refresh the page.');
+      setError("Authentication token not available. Please refresh the page.");
       return;
     }
 
-    const confirmed = window.confirm(`Delete item "${itemForm.title}"? This cannot be undone.`);
+    const confirmed = window.confirm(
+      `Delete item "${itemForm.title}"? This cannot be undone.`,
+    );
     if (!confirmed) {
       return;
     }
@@ -459,21 +522,21 @@ export default function CollectionsManager() {
       const response = await fetch(
         `/api/collections/${encodeURIComponent(collectionSlug)}/items?slug=${encodeURIComponent(selectedItemSlug)}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: getAuthHeaders(),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete item');
+        throw new Error(errorData.error || "Failed to delete item");
       }
 
       await loadCollections(collectionSlug);
       startNewItem();
-      setSuccess('Item deleted successfully.');
+      setSuccess("Item deleted successfully.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete item');
+      setError(err instanceof Error ? err.message : "Failed to delete item");
     } finally {
       setItemDeleting(false);
     }
@@ -484,8 +547,12 @@ export default function CollectionsManager() {
       <aside className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--color-primary)]">Collections</h2>
-            <p className="text-sm text-[var(--text-light)]/60">Manage your collections</p>
+            <h2 className="text-xl font-semibold text-[var(--color-primary)]">
+              Collections
+            </h2>
+            <p className="text-sm text-[var(--text-light)]/60">
+              Manage your collections
+            </p>
           </div>
           <button
             type="button"
@@ -507,7 +574,8 @@ export default function CollectionsManager() {
         ) : (
           <div className="grid gap-3">
             {collectionsList.map((collection) => {
-              const isActive = collection.metadata.slug === selectedCollectionSlug;
+              const isActive =
+                collection.metadata.slug === selectedCollectionSlug;
               return (
                 <button
                   key={collection.metadata.slug}
@@ -515,13 +583,19 @@ export default function CollectionsManager() {
                   onClick={() => selectCollection(collection)}
                   className={`rounded-lg border px-4 py-3 text-left transition ${
                     isActive
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                      : 'border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35'
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                      : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
                   }`}
                 >
-                  <p className="font-semibold text-[var(--color-primary)]">{collection.metadata.name}</p>
-                  <p className="text-sm text-[var(--text-light)]/60">/{collection.metadata.slug}</p>
-                  <p className="text-sm text-[var(--text-light)]/60">{collection.items.length} items</p>
+                  <p className="font-semibold text-[var(--color-primary)]">
+                    {collection.metadata.name}
+                  </p>
+                  <p className="text-sm text-[var(--text-light)]/60">
+                    /{collection.metadata.slug}
+                  </p>
+                  <p className="text-sm text-[var(--text-light)]/60">
+                    {collection.items.length} items
+                  </p>
                 </button>
               );
             })}
@@ -534,8 +608,8 @@ export default function CollectionsManager() {
           <div
             className={`rounded-md border px-4 py-3 ${
               error
-                ? 'border-red-400/35 bg-red-500/10 text-red-200'
-                : 'border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                ? "border-red-400/35 bg-red-500/10 text-red-200"
+                : "border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
             }`}
           >
             {error || success}
@@ -548,16 +622,19 @@ export default function CollectionsManager() {
         >
           <div>
             <h3 className="text-xl font-semibold text-[var(--color-primary)]">
-              {selectedCollectionSlug ? 'Edit Collection' : 'Create Collection'}
+              {selectedCollectionSlug ? "Edit Collection" : "Create Collection"}
             </h3>
             <p className="text-sm text-[var(--text-light)]/60 mt-1">
-              Collections display items in a vinyl-style carousel you can flip through.
+              Collections display items in a vinyl-style carousel you can flip
+              through.
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Collection Name</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Collection Name
+              </label>
               <input
                 type="text"
                 value={collectionForm.name}
@@ -566,7 +643,11 @@ export default function CollectionsManager() {
                   setCollectionForm((prev) => ({
                     ...prev,
                     name,
-                    slug: !selectedCollectionSlug || prev.slug === generateSlug(prev.name) ? generateSlug(name) : prev.slug,
+                    slug:
+                      !selectedCollectionSlug ||
+                      prev.slug === generateSlug(prev.name)
+                        ? generateSlug(name)
+                        : prev.slug,
                   }));
                 }}
                 className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
@@ -574,30 +655,51 @@ export default function CollectionsManager() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Slug</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Slug
+              </label>
               <input
                 type="text"
                 value={collectionForm.slug}
-                onChange={(event) => setCollectionForm((prev) => ({ ...prev, slug: event.target.value }))}
+                onChange={(event) =>
+                  setCollectionForm((prev) => ({
+                    ...prev,
+                    slug: event.target.value,
+                  }))
+                }
                 className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
                 required
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Description</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Description
+              </label>
               <textarea
                 value={collectionForm.description}
-                onChange={(event) => setCollectionForm((prev) => ({ ...prev, description: event.target.value }))}
+                onChange={(event) =>
+                  setCollectionForm((prev) => ({
+                    ...prev,
+                    description: event.target.value,
+                  }))
+                }
                 className="w-full min-h-28 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg resize-y"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Date</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Date
+              </label>
               <input
                 type="date"
                 value={collectionForm.date}
-                onChange={(event) => setCollectionForm((prev) => ({ ...prev, date: event.target.value }))}
+                onChange={(event) =>
+                  setCollectionForm((prev) => ({
+                    ...prev,
+                    date: event.target.value,
+                  }))
+                }
                 className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
                 required
               />
@@ -605,7 +707,9 @@ export default function CollectionsManager() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Collection Cover Image</label>
+            <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+              Collection Cover Image
+            </label>
             <input
               type="file"
               ref={collectionCoverInputRef}
@@ -615,7 +719,9 @@ export default function CollectionsManager() {
               className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
             />
             <p className="text-sm text-[var(--text-light)]/60 mt-2">
-              {uploadingCollectionImage ? 'Uploading image...' : 'Upload a cover image for the collection.'}
+              {uploadingCollectionImage
+                ? "Uploading image..."
+                : "Upload a cover image for the collection."}
             </p>
             {collectionForm.image && (
               <img
@@ -632,7 +738,11 @@ export default function CollectionsManager() {
               disabled={collectionSubmitting}
               className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-60"
             >
-              {collectionSubmitting ? 'Saving...' : selectedCollectionSlug ? 'Save Collection' : 'Create Collection'}
+              {collectionSubmitting
+                ? "Saving..."
+                : selectedCollectionSlug
+                  ? "Save Collection"
+                  : "Create Collection"}
             </button>
             <button
               type="button"
@@ -645,7 +755,7 @@ export default function CollectionsManager() {
               }}
               className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
             >
-              {selectedCollectionSlug ? 'Reset' : 'Clear'}
+              {selectedCollectionSlug ? "Reset" : "Clear"}
             </button>
             {selectedCollectionSlug && (
               <button
@@ -654,7 +764,7 @@ export default function CollectionsManager() {
                 disabled={collectionDeleting}
                 className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
               >
-                {collectionDeleting ? 'Deleting...' : 'Delete Collection'}
+                {collectionDeleting ? "Deleting..." : "Delete Collection"}
               </button>
             )}
           </div>
@@ -663,9 +773,13 @@ export default function CollectionsManager() {
         <div className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5 space-y-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="text-xl font-semibold text-[var(--color-primary)]">Collection Items</h3>
+              <h3 className="text-xl font-semibold text-[var(--color-primary)]">
+                Collection Items
+              </h3>
               <p className="text-sm text-[var(--text-light)]/60">
-                {selectedCollectionSlug ? `Managing items in /${selectedCollectionSlug}` : 'Save a collection before adding items.'}
+                {selectedCollectionSlug
+                  ? `Managing items in /${selectedCollectionSlug}`
+                  : "Save a collection before adding items."}
               </p>
             </div>
             <button
@@ -692,16 +806,24 @@ export default function CollectionsManager() {
                       onClick={() => selectItem(item)}
                       className={`rounded-lg border px-4 py-3 text-left transition flex items-center gap-3 ${
                         isActive
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                          : 'border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35'
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                          : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
                       }`}
                     >
                       {item.image && (
-                        <img src={item.image} alt={item.title} className="w-12 h-12 object-cover rounded" />
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-12 h-12 object-cover rounded"
+                        />
                       )}
                       <div>
-                        <p className="font-semibold text-[var(--color-primary)]">{item.title}</p>
-                        <p className="text-sm text-[var(--text-light)]/60">/{item.slug} &middot; {item.date}</p>
+                        <p className="font-semibold text-[var(--color-primary)]">
+                          {item.title}
+                        </p>
+                        <p className="text-sm text-[var(--text-light)]/60">
+                          /{item.slug} &middot; {item.date}
+                        </p>
                       </div>
                     </button>
                   );
@@ -709,14 +831,19 @@ export default function CollectionsManager() {
             </div>
           ) : (
             <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-              {selectedCollectionSlug ? 'No items in this collection yet.' : 'Create a collection first to start adding items.'}
+              {selectedCollectionSlug
+                ? "No items in this collection yet."
+                : "Create a collection first to start adding items."}
             </div>
           )}
 
-          <form onSubmit={handleItemSubmit} className="grid gap-5 border-t border-[var(--color-secondary)]/20 pt-5">
+          <form
+            onSubmit={handleItemSubmit}
+            className="grid gap-5 border-t border-[var(--color-secondary)]/20 pt-5"
+          >
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-                {selectedItemSlug ? 'Edit Item' : 'Create Item'}
+                {selectedItemSlug ? "Edit Item" : "Create Item"}
               </h4>
               <div className="flex gap-2">
                 <button
@@ -725,14 +852,14 @@ export default function CollectionsManager() {
                   disabled={uploadingInlineImage || !selectedCollectionSlug}
                   className="px-3 py-1 border border-[var(--color-secondary)]/40 bg-black/35 rounded cursor-pointer disabled:opacity-50"
                 >
-                  {uploadingInlineImage ? 'Uploading...' : 'Insert Photo'}
+                  {uploadingInlineImage ? "Uploading..." : "Insert Photo"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setItemPreview((prev) => !prev)}
                   className="px-3 py-1 bg-[var(--color-primary)] text-[var(--text-color-dark)] rounded font-medium cursor-pointer"
                 >
-                  {itemPreview ? 'Edit' : 'Preview'}
+                  {itemPreview ? "Edit" : "Preview"}
                 </button>
               </div>
             </div>
@@ -747,7 +874,9 @@ export default function CollectionsManager() {
 
             <div className="grid gap-5 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Title</label>
+                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                  Title
+                </label>
                 <input
                   type="text"
                   value={itemForm.title}
@@ -756,7 +885,11 @@ export default function CollectionsManager() {
                     setItemForm((prev) => ({
                       ...prev,
                       title,
-                      slug: !selectedItemSlug || prev.slug === generateSlug(prev.title) ? generateSlug(title) : prev.slug,
+                      slug:
+                        !selectedItemSlug ||
+                        prev.slug === generateSlug(prev.title)
+                          ? generateSlug(title)
+                          : prev.slug,
                     }));
                   }}
                   className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
@@ -765,22 +898,36 @@ export default function CollectionsManager() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Slug</label>
+                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                  Slug
+                </label>
                 <input
                   type="text"
                   value={itemForm.slug}
-                  onChange={(event) => setItemForm((prev) => ({ ...prev, slug: event.target.value }))}
+                  onChange={(event) =>
+                    setItemForm((prev) => ({
+                      ...prev,
+                      slug: event.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
                   required
                   disabled={!selectedCollectionSlug}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Date</label>
+                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                  Date
+                </label>
                 <input
                   type="date"
                   value={itemForm.date}
-                  onChange={(event) => setItemForm((prev) => ({ ...prev, date: event.target.value }))}
+                  onChange={(event) =>
+                    setItemForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
                   className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
                   required
                   disabled={!selectedCollectionSlug}
@@ -789,7 +936,9 @@ export default function CollectionsManager() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Item Image (square cover)</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Item Image (square cover)
+              </label>
               <input
                 type="file"
                 ref={itemCoverInputRef}
@@ -799,7 +948,9 @@ export default function CollectionsManager() {
                 className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
               />
               <p className="text-sm text-[var(--text-light)]/60 mt-2">
-                {uploadingItemImage ? 'Uploading image...' : 'Upload the main square cover image for this item (like album art).'}
+                {uploadingItemImage
+                  ? "Uploading image..."
+                  : "Upload the main square cover image for this item (like album art)."}
               </p>
               {itemForm.image && (
                 <img
@@ -811,12 +962,19 @@ export default function CollectionsManager() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">Description (Markdown)</label>
+              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                Description (Markdown)
+              </label>
               {!itemPreview ? (
                 <textarea
                   ref={itemTextAreaRef}
                   value={itemForm.markdown}
-                  onChange={(event) => setItemForm((prev) => ({ ...prev, markdown: event.target.value }))}
+                  onChange={(event) =>
+                    setItemForm((prev) => ({
+                      ...prev,
+                      markdown: event.target.value,
+                    }))
+                  }
                   className="w-full min-h-48 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg font-mono text-sm resize-y"
                   disabled={!selectedCollectionSlug}
                   placeholder="Optional notes or description for this item..."
@@ -847,12 +1005,18 @@ export default function CollectionsManager() {
                 disabled={itemSubmitting || !selectedCollectionSlug}
                 className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-50"
               >
-                {itemSubmitting ? 'Saving...' : selectedItemSlug ? 'Save Item' : 'Create Item'}
+                {itemSubmitting
+                  ? "Saving..."
+                  : selectedItemSlug
+                    ? "Save Item"
+                    : "Create Item"}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  const matchedItem = currentCollection?.items.find((item) => item.slug === selectedItemSlug);
+                  const matchedItem = currentCollection?.items.find(
+                    (item) => item.slug === selectedItemSlug,
+                  );
                   if (matchedItem) {
                     selectItem(matchedItem);
                   } else {
@@ -861,7 +1025,7 @@ export default function CollectionsManager() {
                 }}
                 className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
               >
-                {selectedItemSlug ? 'Reset' : 'Clear'}
+                {selectedItemSlug ? "Reset" : "Clear"}
               </button>
               {selectedItemSlug && (
                 <button
@@ -870,7 +1034,7 @@ export default function CollectionsManager() {
                   disabled={itemDeleting}
                   className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
                 >
-                  {itemDeleting ? 'Deleting...' : 'Delete Item'}
+                  {itemDeleting ? "Deleting..." : "Delete Item"}
                 </button>
               )}
             </div>
