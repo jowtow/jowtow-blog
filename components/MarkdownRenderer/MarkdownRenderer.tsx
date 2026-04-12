@@ -48,7 +48,11 @@ export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
               alt={alt ?? ""}
               loading="lazy"
               className="article-img"
-              onClick={() => src && handleImageClick(src, alt ?? "")}
+              onClick={() => {
+                if (typeof src === "string") {
+                  handleImageClick(src, alt ?? "");
+                }
+              }}
             />
           ),
         }}
