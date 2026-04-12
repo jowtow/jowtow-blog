@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/auth";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
 type AdminSeriesMetadata = {
   slug: string;
@@ -317,16 +316,23 @@ export default function SeriesManager() {
   const handleInlineImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
 
     setUploadingInlineImage(true);
     setSeriesError(null);
 
     try {
-      const url = await uploadImageFile(file);
-      const altText = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
-      insertInlineImage(`\n![${altText}](${url})\n`);
+      const snippets = await Promise.all(
+        files.map(async (file) => {
+          const url = await uploadImageFile(file);
+          const altText = file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/[-_]+/g, " ");
+          return `![${altText}](${url})`;
+        }),
+      );
+      insertInlineImage(`\n${snippets.join("\n")}\n`);
     } catch (error) {
       setSeriesError(
         error instanceof Error ? error.message : "Failed to upload image",
@@ -915,6 +921,7 @@ export default function SeriesManager() {
               ref={inlineImageInputRef}
               onChange={handleInlineImageUpload}
               accept="image/*"
+              multiple
               className="hidden"
             />
 
@@ -1044,20 +1051,7 @@ export default function SeriesManager() {
                 />
               ) : (
                 <div className="min-h-80 px-4 py-3 border border-[var(--color-secondary)]/40 bg-black/40 rounded-lg overflow-auto leading-7">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      img: (props) => (
-                        <img
-                          {...props}
-                          loading="lazy"
-                          className="max-h-[40vh] rounded border border-[var(--color-secondary)]/50 block my-3 mx-auto max-w-[min(100%,70vw)]"
-                        />
-                      ),
-                    }}
-                  >
-                    {entryForm.markdown}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={entryForm.markdown} />
                 </div>
               )}
             </div>

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import remarkGfm from "remark-gfm";
 import { getPosts, getPostBySlug } from "@/lib/posts";
 import { Post } from "@/lib/posts";
 import Author from "../../../components/Author/Author";
-import ReactMarkdown from "react-markdown";
+import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 import styles from "./page.module.css";
 import Image from "next/image";
 
@@ -46,7 +45,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
             alt={post.metadata.title}
             fill
             priority
-            unoptimized={post.metadata.image.startsWith('/api/images/')}
+            unoptimized={post.metadata.image.startsWith("/api/images/")}
           />
         ) : (
           <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />
@@ -56,9 +55,7 @@ export default async function BlogPost({ params }: { params: PostParam }) {
         className={`${styles.jowtowarticle} m-3 p-2 flex flex-col border-t-2 border-[var(--color-primary)]`}
       >
         <div className="p-[0px 5vw] flex flex-col">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {post.markdownBody}
-          </ReactMarkdown>
+          <MarkdownRenderer content={post.markdownBody} />
         </div>
       </article>
       <Author></Author>

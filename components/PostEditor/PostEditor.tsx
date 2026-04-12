@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "@/lib/auth";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
 interface PostEditorProps {
   mode?: "create" | "edit";
@@ -206,16 +205,24 @@ export default function PostEditor({
   const handleMarkdownImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
 
     setUploadingMarkdownImage(true);
     setError(null);
 
     try {
-      const url = await uploadImageFile(file);
-      const altText = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
-      const markdownSnippet = `\n![${altText}](${url})\n`;
+      const snippets = await Promise.all(
+        files.map(async (file) => {
+          const url = await uploadImageFile(file);
+          const altText = file.name
+            .replace(/\.[^.]+$/, "")
+            .replace(/[-_]+/g, " ");
+          return `![${altText}](${url})`;
+        }),
+      );
+      // Join multiple images on adjacent lines so they render as a photo row
+      const markdownSnippet = `\n${snippets.join("\n")}\n`;
       insertAtCursor(markdownSnippet);
       setSuccess(false);
     } catch (err) {
@@ -462,6 +469,7 @@ export default function PostEditor({
             ref={markdownFileInputRef}
             onChange={handleMarkdownImageUpload}
             accept="image/*"
+            multiple
             disabled={uploadingMarkdownImage}
             className="hidden"
           />
@@ -478,20 +486,7 @@ export default function PostEditor({
             />
           ) : (
             <div className="w-full min-h-96 px-4 py-3 border border-[var(--color-secondary)]/40 rounded-lg bg-black/40 overflow-auto leading-7">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  img: ({ node, ...props }) => (
-                    <img
-                      {...props}
-                      loading="lazy"
-                      className="max-h-[40vh] rounded border border-[var(--color-secondary)]/50 block my-3 mx-auto max-w-[min(100%,70vw)]"
-                    />
-                  ),
-                }}
-              >
-                {formData.markdown}
-              </ReactMarkdown>
+              <MarkdownRenderer content={formData.markdown} />
             </div>
           )}
 

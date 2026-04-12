@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
 type CarouselItem = {
   title: string;
@@ -213,20 +212,7 @@ export default function CollectionCarousel({ items }: CollectionCarouselProps) {
 
             {activeItem.markdown && (
               <div className="jowtowarticle prose prose-invert max-w-none text-[var(--text-light)]/85 leading-7">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    img: (props) => (
-                      <img
-                        {...props}
-                        loading="lazy"
-                        className="max-h-[40vh] rounded border border-[var(--color-secondary)]/50 block my-3 mx-auto max-w-[min(100%,70vw)]"
-                      />
-                    ),
-                  }}
-                >
-                  {activeItem.markdown}
-                </ReactMarkdown>
+                <MarkdownRenderer content={activeItem.markdown} />
               </div>
             )}
           </div>

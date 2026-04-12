@@ -4,8 +4,18 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
-    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    Fira Sans,
+    Droid Sans,
+    Helvetica Neue,
+    sans-serif;
   background-color: var(--color-dark);
   color: var(--text-light);
 }
@@ -77,4 +87,80 @@ h4 {
   display: block;
   margin: 10px auto;
   max-width: 70vw;
+}
+
+/* Styled image for MarkdownRenderer (applies everywhere including non-jowtowarticle contexts) */
+.article-img {
+  max-height: 40vh;
+  border-radius: 10px;
+  border: 2px solid var(--color-secondary);
+  display: block;
+  margin: 10px auto;
+  max-width: min(100%, 70vw);
+  cursor: zoom-in;
+}
+
+/* Photo grid: multiple images on adjacent lines with no blank line between them */
+.photo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.photo-row .article-img {
+  flex: 1 1 calc(50% - 5px);
+  min-width: 120px;
+  max-width: calc(50% - 5px);
+  max-height: 45vh;
+  margin: 0;
+}
+
+/* Lightbox overlay */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  animation: opacityIn 0.15s ease;
+}
+
+.lightbox-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 95vw;
+  max-height: 95vh;
+  cursor: default;
+}
+
+.lightbox-img {
+  max-width: 92vw;
+  max-height: 90vh;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  color: white;
+  font-size: 2.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+  padding: 5px 10px;
+  z-index: 10000;
+}
+
+.lightbox-close:hover {
+  color: var(--color-primary);
 }

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { getSeries, getSeriesByName } from "@/lib/posts";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 import Image from "next/image";
 type SeriesParam = {
   seriesname: string;
 };
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export async function generateStaticParams() {
   const series = await getSeries();
 
@@ -36,7 +35,7 @@ export default async function SeriesListing({
             src={series.metadata.image}
             alt={series.metadata.name}
             fill
-            unoptimized={series.metadata.image.startsWith('/api/images/')}
+            unoptimized={series.metadata.image.startsWith("/api/images/")}
           />
         ) : (
           <div className="absolute inset-0 z-0 bg-[var(--color-light)]" />
@@ -70,9 +69,7 @@ export default async function SeriesListing({
                   <span className="text-l border-[var(--color-primary)] border-b">
                     {post.metadata.date}
                   </span>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {post.markdownBody}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={post.markdownBody} />
                 </div>
               ))}
           </div>
