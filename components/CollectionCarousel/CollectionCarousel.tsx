@@ -20,8 +20,6 @@ type CollectionCarouselProps = {
 export default function CollectionCarousel({ items }: CollectionCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isScrolling = useRef(false);
-  const lastScrollTime = useRef(0);
 
   const activeItem = items[activeIndex];
 
@@ -32,73 +30,6 @@ export default function CollectionCarousel({ items }: CollectionCarouselProps) {
     },
     [items.length],
   );
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > 0 || Math.abs(e.deltaX) > 0) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      const now = Date.now();
-      if (now - lastScrollTime.current < 280) return;
-
-      if (Math.abs(e.deltaY) > 12) {
-        lastScrollTime.current = now;
-        if (e.deltaY > 0) {
-          goTo(activeIndex + 1);
-        } else {
-          goTo(activeIndex - 1);
-        }
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [activeIndex, goTo]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let touchStartY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-      isScrolling.current = false;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (isScrolling.current) return;
-
-      const deltaY = touchStartY - e.touches[0].clientY;
-
-      if (Math.abs(deltaY) > 28) {
-        e.preventDefault();
-        isScrolling.current = true;
-        if (deltaY > 0) {
-          goTo(activeIndex + 1);
-        } else {
-          goTo(activeIndex - 1);
-        }
-      }
-    };
-
-    container.addEventListener("touchstart", handleTouchStart, {
-      passive: true,
-    });
-    container.addEventListener("touchmove", handleTouchMove, {
-      passive: false,
-    });
-
-    return () => {
-      container.removeEventListener("touchstart", handleTouchStart);
-      container.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, [activeIndex, goTo]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -264,7 +195,7 @@ export default function CollectionCarousel({ items }: CollectionCarouselProps) {
           </div>
 
           <p className="mt-2 text-xs text-[var(--text-light)]/50 text-center">
-            Scroll, swipe, or use arrow keys to flip through.
+            Use arrow keys or buttons to navigate.
           </p>
         </div>
 
