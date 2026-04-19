@@ -85,7 +85,12 @@ export async function POST(request: NextRequest) {
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
 
-      for (const maxDimension of RESIZE_DIMENSIONS) {
+      const resizeTargets =
+        buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
+          ? [MAX_IMAGE_DIMENSION]
+          : RESIZE_DIMENSIONS;
+
+      for (const maxDimension of resizeTargets) {
         const pipeline = sharp(buffer, { failOnError: false })
           .rotate()
           .resize({
@@ -115,26 +120,23 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (!isBelowSizeLimit) {
-        if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+      if (isBelowSizeLimit) {
+        if (
+          optimizedBuffer.length >= buffer.length &&
+          buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
+        ) {
           useOriginalBuffer();
-        } else {
-          return NextResponse.json(
-            {
-              error:
-                'Image is too large even after optimization. Please upload a smaller image.',
-            },
-            { status: 413 }
-          );
         }
-      }
-
-      if (
-        isBelowSizeLimit &&
-        optimizedBuffer.length >= buffer.length &&
-        buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
-      ) {
+      } else if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
         useOriginalBuffer();
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              'Image is too large even after optimization. Please upload a smaller image.',
+          },
+          { status: 413 }
+        );
       }
     }
 
