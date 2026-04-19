@@ -62,8 +62,21 @@ function normalizeDate(value: string | Date) {
   return parsed;
 }
 
+function stripMarkdown(markdown: string) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/^>+\s?/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/[#*_~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function summarizeMarkdown(markdown: string, limit = 400) {
-  const normalized = markdown.replace(/\s+/g, " ").trim();
+  const normalized = stripMarkdown(markdown);
   if (!normalized) {
     return "";
   }
@@ -143,10 +156,11 @@ export async function GET(request: NextRequest) {
     });
 
     for (const item of collection.items) {
+      const itemLink = `${origin}/collections/${collection.path}#${item.slug}`;
       entries.push({
         title: `${collection.metadata.name}: ${item.data.title}`,
         description: summarizeMarkdown(item.markdown),
-        link: `${origin}/collections/${collection.path}`,
+        link: itemLink,
         date: normalizeDate(item.data.date),
       });
     }
@@ -156,7 +170,7 @@ export async function GET(request: NextRequest) {
 
   const feedTitle = getFeedTitle();
   const feedDescription = getFeedDescription();
-  const lastBuildDate = (entries[0]?.date ?? new Date()).toUTCString();
+  const lastBuildDate = entries[0]?.date.toUTCString();
   const ttlMinutes = getTtlMinutes();
 
   const rssXml = [
@@ -166,7 +180,7 @@ export async function GET(request: NextRequest) {
     `<title>${escapeXml(feedTitle)}</title>`,
     `<link>${escapeXml(origin)}</link>`,
     `<description>${escapeXml(feedDescription)}</description>`,
-    `<lastBuildDate>${lastBuildDate}</lastBuildDate>`,
+    lastBuildDate ? `<lastBuildDate>${lastBuildDate}</lastBuildDate>` : "",
     `<ttl>${ttlMinutes}</ttl>`,
     entries.map(buildItemXml).join(""),
     "</channel>",
