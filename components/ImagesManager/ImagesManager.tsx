@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "@/lib/auth";
 
 type ImageMetadata = Record<string, unknown>;
@@ -122,7 +122,7 @@ export default function ImagesManager() {
     getToken();
   }, [user]);
 
-  const loadImages = async () => {
+  const loadImages = useCallback(async () => {
     if (!authToken && !isLocalBypassEnabled) {
       setError("Authentication token not available. Please refresh the page.");
       setLoading(false);
@@ -169,11 +169,11 @@ export default function ImagesManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authToken, isLocalBypassEnabled]);
 
   useEffect(() => {
     loadImages();
-  }, [authToken]);
+  }, [loadImages]);
 
   const storageSummary = useMemo(() => {
     let totalBytes = 0;
