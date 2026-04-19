@@ -116,11 +116,11 @@ export async function POST(request: NextRequest) {
       optimizationQuality = null;
     };
 
-    let sharp: SharpFactory | null = null;
+    let sharpInstance: SharpFactory | null = null;
 
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
       try {
-        sharp = await getSharp();
+        sharpInstance = await getSharp();
       } catch (error) {
         if (buffer.length > MAX_OUTPUT_FILE_SIZE_BYTES) {
           return NextResponse.json(
@@ -133,11 +133,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        sharp = null;
+        sharpInstance = null;
       }
     }
 
-    if (sharp && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
+    if (sharpInstance && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
 
       const resizeTargets =
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
           : RESIZE_DIMENSIONS;
 
       for (const maxDimension of resizeTargets) {
-        const pipeline = sharp(buffer, { failOnError: false })
+        const pipeline = sharpInstance(buffer, { failOnError: false })
           .rotate()
           .resize({
             width: maxDimension,

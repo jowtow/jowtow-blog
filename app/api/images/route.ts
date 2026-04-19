@@ -125,7 +125,7 @@ function createImageUrl(key: string): string {
 async function optimizeExistingImage(
   buffer: Buffer,
   mimeType: string,
-  sharp: SharpFactory
+  sharpInstance: SharpFactory
 ): Promise<OptimizeOutcome> {
   if (PASSTHROUGH_MIME_TYPES.has(mimeType)) {
     return {
@@ -149,7 +149,7 @@ async function optimizeExistingImage(
   let withinLimitQuality: number | null = null;
 
   for (const maxDimension of resizeTargets) {
-    const pipeline = sharp(buffer, { failOnError: false })
+    const pipeline = sharpInstance(buffer, { failOnError: false })
       .rotate()
       .resize({
         width: maxDimension,
@@ -260,9 +260,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let sharp: SharpFactory;
+    let sharpInstance: SharpFactory;
     try {
-      sharp = await getSharp();
+      sharpInstance = await getSharp();
     } catch (error) {
       return NextResponse.json(
         {
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
         const optimization = await optimizeExistingImage(
           inputBuffer,
           inputMimeType,
-          sharp
+          sharpInstance
         );
 
         if (!optimization.wasOptimized) {
