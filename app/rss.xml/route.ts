@@ -9,9 +9,30 @@ type FeedEntry = {
   date: Date;
 };
 
+const DEFAULT_FEED_TITLE = "jowtow.dev";
+const DEFAULT_FEED_DESCRIPTION = "John Townsend's personal site";
+const DEFAULT_TTL_MINUTES = 60;
+
 function getSiteOrigin(request: NextRequest) {
   const configuredOrigin = process.env.SITE_URL || process.env.URL;
   return (configuredOrigin || request.nextUrl.origin).replace(/\/$/, "");
+}
+
+function getFeedTitle() {
+  return process.env.SITE_TITLE || DEFAULT_FEED_TITLE;
+}
+
+function getFeedDescription() {
+  return process.env.SITE_DESCRIPTION || DEFAULT_FEED_DESCRIPTION;
+}
+
+function getTtlMinutes() {
+  const rawValue = process.env.RSS_TTL_MINUTES ?? "";
+  const parsed = Number.parseInt(rawValue, 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return DEFAULT_TTL_MINUTES;
 }
 
 function escapeXml(value: string) {
@@ -133,9 +154,10 @@ export async function GET(request: NextRequest) {
 
   entries.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  const feedTitle = "jowtow.dev";
-  const feedDescription = "John Townsend's personal site";
+  const feedTitle = getFeedTitle();
+  const feedDescription = getFeedDescription();
   const lastBuildDate = (entries[0]?.date ?? new Date()).toUTCString();
+  const ttlMinutes = getTtlMinutes();
 
   const rssXml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -145,7 +167,7 @@ export async function GET(request: NextRequest) {
     `<link>${escapeXml(origin)}</link>`,
     `<description>${escapeXml(feedDescription)}</description>`,
     `<lastBuildDate>${lastBuildDate}</lastBuildDate>`,
-    `<ttl>60</ttl>`,
+    `<ttl>${ttlMinutes}</ttl>`,
     entries.map(buildItemXml).join(""),
     "</channel>",
     "</rss>",
