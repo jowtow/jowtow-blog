@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     });
 
     for (const item of collection.items) {
-      const itemLink = `${origin}/collections/${collection.path}#${item.slug}`;
+      const itemLink = `${origin}/collections/${collection.path}?item=${encodeURIComponent(item.slug)}`;
       entries.push({
         title: `${collection.metadata.name}: ${item.data.title}`,
         description: summarizeMarkdown(item.markdown),
@@ -170,7 +170,8 @@ export async function GET(request: NextRequest) {
 
   const feedTitle = getFeedTitle();
   const feedDescription = getFeedDescription();
-  const lastBuildDate = entries[0]?.date.toUTCString();
+  const lastBuildDate =
+    entries.length > 0 ? entries[0].date.toUTCString() : null;
   const ttlMinutes = getTtlMinutes();
 
   const rssXml = [
