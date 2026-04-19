@@ -12,6 +12,7 @@ type FeedEntry = {
 const DEFAULT_FEED_TITLE = "jowtow.dev";
 const DEFAULT_FEED_DESCRIPTION = "John Townsend's personal site";
 const DEFAULT_TTL_MINUTES = 60;
+const DEFAULT_SUMMARY_LENGTH = 400;
 
 function getSiteOrigin(request: NextRequest) {
   const configuredOrigin = process.env.SITE_URL || process.env.URL;
@@ -57,7 +58,7 @@ function escapeXml(value: string) {
 function normalizeDate(value: string | Date) {
   const parsed = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    return new Date(0);
+    return new Date();
   }
   return parsed;
 }
@@ -75,7 +76,7 @@ function stripMarkdown(markdown: string) {
     .trim();
 }
 
-function summarizeMarkdown(markdown: string, limit = 400) {
+function summarizeMarkdown(markdown: string, limit = DEFAULT_SUMMARY_LENGTH) {
   const normalized = stripMarkdown(markdown);
   if (!normalized) {
     return "";
