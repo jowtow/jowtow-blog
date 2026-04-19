@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
+import sharp from 'sharp';
 import { verifyAdminAuth } from '@/lib/serverAuth';
+
+const MAX_INPUT_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2560;
+const RESIZE_DIMENSIONS = [MAX_IMAGE_DIMENSION, 2000, 1600];
+const OUTPUT_QUALITY_STEPS = [82, 75, 68];
+const PASSTHROUGH_MIME_TYPES = new Set(['image/gif', 'image/svg+xml']);
+
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+};
+
+function sanitizeFilename(originalName: string) {
+  const sanitized = originalName.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
+  const parts = sanitized.split('.').filter(Boolean);
+  const extension = parts.length > 1 ? parts.pop() : undefined;
+  const baseName = parts.length ? parts.join('.') : 'image';
+  return { baseName, extension };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,27 +56,105 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (max 20MB before optimization)
+    if (file.size > MAX_INPUT_FILE_SIZE_BYTES) {
       return NextResponse.json(
-        { error: 'File size must be less than 5MB' },
+        { error: 'File size must be less than 20MB' },
         { status: 400 }
       );
     }
 
-    // Validate filename
-    const sanitizedName = file.name.replace(/[^a-z0-9.-]/gi, '-').toLowerCase();
-    const filename = `${Date.now()}-${sanitizedName}`;
+    const { baseName, extension } = sanitizeFilename(file.name);
+    const originalExtension =
+      extension || MIME_EXTENSION_MAP[file.type] || 'jpg';
 
     // Read file as buffer
-    const buffer = await file.arrayBuffer();
+    const buffer: Buffer = Buffer.from(await file.arrayBuffer());
+
+    let optimizedBuffer: Buffer = buffer;
+    let outputMimeType = file.type;
+    let outputExtension = originalExtension;
+    let optimizationQuality: number | null = null;
+    const useOriginalBuffer = () => {
+      optimizedBuffer = buffer;
+      outputMimeType = file.type;
+      outputExtension = originalExtension;
+      optimizationQuality = null;
+    };
+
+    if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
+      let isBelowSizeLimit = false;
+
+      const resizeTargets =
+        buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
+          ? [MAX_IMAGE_DIMENSION]
+          : RESIZE_DIMENSIONS;
+
+      for (const maxDimension of resizeTargets) {
+        const pipeline = sharp(buffer, { failOnError: false })
+          .rotate()
+          .resize({
+            width: maxDimension,
+            height: maxDimension,
+            fit: 'inside',
+            withoutEnlargement: true,
+          });
+
+        for (const quality of OUTPUT_QUALITY_STEPS) {
+          const candidate: Buffer = await pipeline
+            .clone()
+            .webp({ quality, alphaQuality: 90, effort: 4 })
+            .toBuffer();
+          if (candidate.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+            optimizationQuality = quality;
+            optimizedBuffer = candidate;
+            outputMimeType = 'image/webp';
+            outputExtension = 'webp';
+            isBelowSizeLimit = true;
+            break;
+          }
+        }
+
+        if (isBelowSizeLimit) {
+          break;
+        }
+      }
+
+      if (isBelowSizeLimit) {
+        if (
+          optimizedBuffer.length >= buffer.length &&
+          buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
+        ) {
+          useOriginalBuffer();
+        }
+      } else if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+        useOriginalBuffer();
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              'Image is too large even after optimization. Please upload a smaller image.',
+          },
+          { status: 413 }
+        );
+      }
+    }
+
+    const filename = `${Date.now()}-${baseName}.${outputExtension}`;
+    const optimizedData = new Blob([new Uint8Array(optimizedBuffer)], {
+      type: outputMimeType,
+    });
 
     // Store in Netlify Blobs
     const store = getStore('images');
-    await store.set(filename, buffer, {
+    await store.set(filename, optimizedData, {
       metadata: {
         originalName: file.name,
-        mimeType: file.type,
+        mimeType: outputMimeType,
+        originalMimeType: file.type,
+        originalSize: file.size.toString(),
+        optimizedSize: optimizedBuffer.length.toString(),
+        optimizationQuality: optimizationQuality?.toString() ?? '',
         uploadedAt: new Date().toISOString(),
       },
     });
