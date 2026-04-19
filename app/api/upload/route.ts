@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     let optimizationQuality: number | null = null;
 
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
-      let optimizedUnderLimit = false;
+      let isBelowSizeLimit = false;
 
       for (const maxDimension of RESIZE_DIMENSIONS) {
         const pipeline = sharp(buffer, { failOnError: false })
@@ -99,17 +99,17 @@ export async function POST(request: NextRequest) {
           outputMimeType = 'image/webp';
           outputExtension = 'webp';
           if (candidate.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
-            optimizedUnderLimit = true;
+            isBelowSizeLimit = true;
             break;
           }
         }
 
-        if (optimizedUnderLimit) {
+        if (isBelowSizeLimit) {
           break;
         }
       }
 
-      if (!optimizedUnderLimit) {
+      if (!isBelowSizeLimit) {
         if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
           optimizedBuffer = buffer;
           outputMimeType = file.type;
@@ -138,8 +138,9 @@ export async function POST(request: NextRequest) {
     }
 
     const filename = `${Date.now()}-${baseName}.${outputExtension}`;
-    const optimizedData = new ArrayBuffer(optimizedBuffer.byteLength);
-    new Uint8Array(optimizedData).set(optimizedBuffer);
+    const optimizedData = new Blob([new Uint8Array(optimizedBuffer)], {
+      type: outputMimeType,
+    });
 
     // Store in Netlify Blobs
     const store = getStore('images');
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
         mimeType: outputMimeType,
         originalMimeType: file.type,
         originalSize: file.size.toString(),
-        optimizedSize: optimizedData.byteLength.toString(),
+        optimizedSize: optimizedBuffer.length.toString(),
         optimizationQuality: optimizationQuality?.toString() ?? '',
         uploadedAt: new Date().toISOString(),
       },
