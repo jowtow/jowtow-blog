@@ -23,7 +23,7 @@ export default function About() {
           <Image
             height={150}
             width={150}
-            src="/Author.webp"
+            src="/Author.jpg"
             alt="Picture of the author."
             className="rounded-full border-3 border-[var(--color-primary)]"
           />
