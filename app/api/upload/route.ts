@@ -6,6 +6,7 @@ import { verifyAdminAuth } from '@/lib/serverAuth';
 const MAX_INPUT_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2560;
+const RESIZE_DIMENSIONS = [MAX_IMAGE_DIMENSION, 2000, 1600];
 const OUTPUT_QUALITY_STEPS = [82, 75, 68];
 const PASSTHROUGH_MIME_TYPES = new Set(['image/gif', 'image/svg+xml']);
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
       extension || MIME_EXTENSION_MAP[file.type] || 'jpg';
 
     // Read file as buffer
-    const buffer = Buffer.from(await file.arrayBuffer()) as Buffer;
+    const buffer: Buffer = Buffer.from(await file.arrayBuffer());
 
     let optimizedBuffer: Buffer = buffer;
     let outputMimeType = file.type;
@@ -76,30 +77,59 @@ export async function POST(request: NextRequest) {
     let optimizationQuality: number | null = null;
 
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
-      const pipeline = sharp(buffer, { failOnError: false })
-        .rotate()
-        .resize({
-          width: MAX_IMAGE_DIMENSION,
-          height: MAX_IMAGE_DIMENSION,
-          fit: 'inside',
-          withoutEnlargement: true,
-        });
+      let optimizedUnderLimit = false;
 
-      for (const quality of OUTPUT_QUALITY_STEPS) {
-        const candidate: Buffer = await pipeline
-          .clone()
-          .webp({ quality, alphaQuality: 90, effort: 4 })
-          .toBuffer();
-        optimizationQuality = quality;
-        optimizedBuffer = candidate;
-        outputMimeType = 'image/webp';
-        outputExtension = 'webp';
-        if (candidate.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+      for (const maxDimension of RESIZE_DIMENSIONS) {
+        const pipeline = sharp(buffer, { failOnError: false })
+          .rotate()
+          .resize({
+            width: maxDimension,
+            height: maxDimension,
+            fit: 'inside',
+            withoutEnlargement: true,
+          });
+
+        for (const quality of OUTPUT_QUALITY_STEPS) {
+          const candidate: Buffer = await pipeline
+            .clone()
+            .webp({ quality, alphaQuality: 90, effort: 4 })
+            .toBuffer();
+          optimizationQuality = quality;
+          optimizedBuffer = candidate;
+          outputMimeType = 'image/webp';
+          outputExtension = 'webp';
+          if (candidate.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+            optimizedUnderLimit = true;
+            break;
+          }
+        }
+
+        if (optimizedUnderLimit) {
           break;
         }
       }
 
-      if (optimizedBuffer.length >= buffer.length) {
+      if (!optimizedUnderLimit) {
+        if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+          optimizedBuffer = buffer;
+          outputMimeType = file.type;
+          outputExtension = originalExtension;
+          optimizationQuality = null;
+        } else {
+          return NextResponse.json(
+            {
+              error:
+                'Image is too large even after optimization. Please upload a smaller image.',
+            },
+            { status: 413 }
+          );
+        }
+      }
+
+      if (
+        optimizedBuffer.length >= buffer.length &&
+        buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
+      ) {
         optimizedBuffer = buffer;
         outputMimeType = file.type;
         outputExtension = originalExtension;
@@ -108,10 +138,8 @@ export async function POST(request: NextRequest) {
     }
 
     const filename = `${Date.now()}-${baseName}.${outputExtension}`;
-    const optimizedData = optimizedBuffer.buffer.slice(
-      optimizedBuffer.byteOffset,
-      optimizedBuffer.byteOffset + optimizedBuffer.byteLength
-    ) as ArrayBuffer;
+    const optimizedData = new ArrayBuffer(optimizedBuffer.byteLength);
+    new Uint8Array(optimizedData).set(optimizedBuffer);
 
     // Store in Netlify Blobs
     const store = getStore('images');
