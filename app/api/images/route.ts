@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-import type sharp from 'sharp';
+import { getSharp, type SharpFactory } from '@/lib/sharpLoader';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -33,40 +33,6 @@ type OptimizeOutcome = {
   wasOptimized: boolean;
   reason?: string;
 };
-
-type SharpFactory = typeof sharp;
-
-let cachedSharpFactory: SharpFactory | null | undefined;
-
-async function getSharp(): Promise<SharpFactory> {
-  if (cachedSharpFactory !== undefined) {
-    if (!cachedSharpFactory) {
-      throw new Error('Sharp is not available in this deployment.');
-    }
-    return cachedSharpFactory;
-  }
-
-  try {
-    const sharpImport = await import('sharp');
-    const resolvedSharp =
-      typeof sharpImport === 'function'
-        ? sharpImport
-        : (sharpImport as { default?: unknown }).default;
-    if (typeof resolvedSharp !== 'function') {
-      throw new Error('Sharp import returned no callable export.');
-    }
-    cachedSharpFactory = resolvedSharp as SharpFactory;
-  } catch (error) {
-    console.error('Failed to load sharp:', error);
-    cachedSharpFactory = null;
-  }
-
-  if (!cachedSharpFactory) {
-    throw new Error('Sharp is not available in this deployment.');
-  }
-
-  return cachedSharpFactory;
-}
 
 function inferImageMimeType(filename: string): string {
   const extension = filename.split('.').pop()?.toLowerCase();
