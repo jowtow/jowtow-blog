@@ -36,14 +36,14 @@ type OptimizeOutcome = {
 
 type SharpFactory = typeof sharp;
 
-let sharpFactory: SharpFactory | null | undefined;
+let cachedSharpFactory: SharpFactory | null | undefined;
 
 async function getSharp(): Promise<SharpFactory> {
-  if (sharpFactory !== undefined) {
-    if (!sharpFactory) {
+  if (cachedSharpFactory !== undefined) {
+    if (!cachedSharpFactory) {
       throw new Error('Sharp is not available in this deployment.');
     }
-    return sharpFactory;
+    return cachedSharpFactory;
   }
 
   try {
@@ -55,17 +55,17 @@ async function getSharp(): Promise<SharpFactory> {
     if (typeof resolvedSharp !== 'function') {
       throw new Error('Sharp import returned no callable export.');
     }
-    sharpFactory = resolvedSharp as SharpFactory;
+    cachedSharpFactory = resolvedSharp as SharpFactory;
   } catch (error) {
     console.error('Failed to load sharp:', error);
-    sharpFactory = null;
+    cachedSharpFactory = null;
   }
 
-  if (!sharpFactory) {
+  if (!cachedSharpFactory) {
     throw new Error('Sharp is not available in this deployment.');
   }
 
-  return sharpFactory;
+  return cachedSharpFactory;
 }
 
 function inferImageMimeType(filename: string): string {
@@ -125,7 +125,7 @@ function createImageUrl(key: string): string {
 async function optimizeExistingImage(
   buffer: Buffer,
   mimeType: string,
-  sharpInstance: SharpFactory
+  sharpFactory: SharpFactory
 ): Promise<OptimizeOutcome> {
   if (PASSTHROUGH_MIME_TYPES.has(mimeType)) {
     return {
@@ -149,7 +149,7 @@ async function optimizeExistingImage(
   let withinLimitQuality: number | null = null;
 
   for (const maxDimension of resizeTargets) {
-    const pipeline = sharpInstance(buffer, { failOnError: false })
+    const pipeline = sharpFactory(buffer, { failOnError: false })
       .rotate()
       .resize({
         width: maxDimension,
@@ -260,9 +260,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let sharpInstance: SharpFactory;
+    let sharpFactory: SharpFactory;
     try {
-      sharpInstance = await getSharp();
+      sharpFactory = await getSharp();
     } catch (error) {
       return NextResponse.json(
         {
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
         const optimization = await optimizeExistingImage(
           inputBuffer,
           inputMimeType,
-          sharpInstance
+          sharpFactory
         );
 
         if (!optimization.wasOptimized) {

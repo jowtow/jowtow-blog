@@ -12,14 +12,14 @@ const PASSTHROUGH_MIME_TYPES = new Set(['image/gif', 'image/svg+xml']);
 
 type SharpFactory = typeof sharp;
 
-let sharpFactory: SharpFactory | null | undefined;
+let cachedSharpFactory: SharpFactory | null | undefined;
 
 async function getSharp(): Promise<SharpFactory> {
-  if (sharpFactory !== undefined) {
-    if (!sharpFactory) {
+  if (cachedSharpFactory !== undefined) {
+    if (!cachedSharpFactory) {
       throw new Error('Sharp is not available in this deployment.');
     }
-    return sharpFactory;
+    return cachedSharpFactory;
   }
 
   try {
@@ -31,17 +31,17 @@ async function getSharp(): Promise<SharpFactory> {
     if (typeof resolvedSharp !== 'function') {
       throw new Error('Sharp import returned no callable export.');
     }
-    sharpFactory = resolvedSharp as SharpFactory;
+    cachedSharpFactory = resolvedSharp as SharpFactory;
   } catch (error) {
     console.error('Failed to load sharp:', error);
-    sharpFactory = null;
+    cachedSharpFactory = null;
   }
 
-  if (!sharpFactory) {
+  if (!cachedSharpFactory) {
     throw new Error('Sharp is not available in this deployment.');
   }
 
-  return sharpFactory;
+  return cachedSharpFactory;
 }
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
@@ -116,11 +116,11 @@ export async function POST(request: NextRequest) {
       optimizationQuality = null;
     };
 
-    let sharpInstance: SharpFactory | null = null;
+    let sharpFactory: SharpFactory | null = null;
 
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
       try {
-        sharpInstance = await getSharp();
+        sharpFactory = await getSharp();
       } catch (error) {
         if (buffer.length > MAX_OUTPUT_FILE_SIZE_BYTES) {
           return NextResponse.json(
@@ -133,11 +133,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        sharpInstance = null;
+        sharpFactory = null;
       }
     }
 
-    if (sharpInstance && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
+    if (sharpFactory && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
 
       const resizeTargets =
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
           : RESIZE_DIMENSIONS;
 
       for (const maxDimension of resizeTargets) {
-        const pipeline = sharpInstance(buffer, { failOnError: false })
+        const pipeline = sharpFactory(buffer, { failOnError: false })
           .rotate()
           .resize({
             width: maxDimension,
