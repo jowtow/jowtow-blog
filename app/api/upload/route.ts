@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-import sharp from 'sharp';
+import type sharp from 'sharp';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_INPUT_FILE_SIZE_BYTES = 20 * 1024 * 1024;
@@ -9,6 +9,40 @@ const MAX_IMAGE_DIMENSION = 2560;
 const RESIZE_DIMENSIONS = [MAX_IMAGE_DIMENSION, 2000, 1600];
 const OUTPUT_QUALITY_STEPS = [82, 75, 68];
 const PASSTHROUGH_MIME_TYPES = new Set(['image/gif', 'image/svg+xml']);
+
+type SharpFactory = typeof sharp;
+
+let sharpFactory: SharpFactory | null | undefined;
+
+async function getSharp(): Promise<SharpFactory> {
+  if (sharpFactory !== undefined) {
+    if (!sharpFactory) {
+      throw new Error('Sharp is not available in this deployment.');
+    }
+    return sharpFactory;
+  }
+
+  try {
+    const sharpImport = await import('sharp');
+    const resolvedSharp =
+      typeof sharpImport === 'function'
+        ? sharpImport
+        : (sharpImport as { default?: unknown }).default;
+    if (typeof resolvedSharp !== 'function') {
+      throw new Error('Sharp import returned no callable export.');
+    }
+    sharpFactory = resolvedSharp as SharpFactory;
+  } catch (error) {
+    console.error('Failed to load sharp:', error);
+    sharpFactory = null;
+  }
+
+  if (!sharpFactory) {
+    throw new Error('Sharp is not available in this deployment.');
+  }
+
+  return sharpFactory;
+}
 
 const MIME_EXTENSION_MAP: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -82,7 +116,28 @@ export async function POST(request: NextRequest) {
       optimizationQuality = null;
     };
 
+    let sharp: SharpFactory | null = null;
+
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
+      try {
+        sharp = await getSharp();
+      } catch (error) {
+        if (buffer.length > MAX_OUTPUT_FILE_SIZE_BYTES) {
+          return NextResponse.json(
+            {
+              error:
+                'Image optimization is unavailable and the file exceeds the 5MB limit. Please upload a smaller image.',
+              details: error instanceof Error ? error.message : undefined,
+            },
+            { status: 503 }
+          );
+        }
+
+        sharp = null;
+      }
+    }
+
+    if (sharp && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
 
       const resizeTargets =

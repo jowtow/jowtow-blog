@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-import sharp from 'sharp';
+import type sharp from 'sharp';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -33,6 +33,40 @@ type OptimizeOutcome = {
   wasOptimized: boolean;
   reason?: string;
 };
+
+type SharpFactory = typeof sharp;
+
+let sharpFactory: SharpFactory | null | undefined;
+
+async function getSharp(): Promise<SharpFactory> {
+  if (sharpFactory !== undefined) {
+    if (!sharpFactory) {
+      throw new Error('Sharp is not available in this deployment.');
+    }
+    return sharpFactory;
+  }
+
+  try {
+    const sharpImport = await import('sharp');
+    const resolvedSharp =
+      typeof sharpImport === 'function'
+        ? sharpImport
+        : (sharpImport as { default?: unknown }).default;
+    if (typeof resolvedSharp !== 'function') {
+      throw new Error('Sharp import returned no callable export.');
+    }
+    sharpFactory = resolvedSharp as SharpFactory;
+  } catch (error) {
+    console.error('Failed to load sharp:', error);
+    sharpFactory = null;
+  }
+
+  if (!sharpFactory) {
+    throw new Error('Sharp is not available in this deployment.');
+  }
+
+  return sharpFactory;
+}
 
 function inferImageMimeType(filename: string): string {
   const extension = filename.split('.').pop()?.toLowerCase();
@@ -88,7 +122,11 @@ function createImageUrl(key: string): string {
   return `/api/images/${encodeURIComponent(key)}`;
 }
 
-async function optimizeExistingImage(buffer: Buffer, mimeType: string): Promise<OptimizeOutcome> {
+async function optimizeExistingImage(
+  buffer: Buffer,
+  mimeType: string,
+  sharp: SharpFactory
+): Promise<OptimizeOutcome> {
   if (PASSTHROUGH_MIME_TYPES.has(mimeType)) {
     return {
       buffer,
@@ -222,6 +260,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let sharp: SharpFactory;
+    try {
+      sharp = await getSharp();
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: 'Image optimization is unavailable in this deployment',
+          details: error instanceof Error ? error.message : undefined,
+        },
+        { status: 503 }
+      );
+    }
+
     const store = getStore('images');
     const targetKeys = optimizeAll
       ? (await store.list()).blobs.map((blob: { key: string }) => blob.key)
@@ -256,7 +307,8 @@ export async function POST(request: NextRequest) {
         const inputMimeType = resolveMimeType(metadata, key);
         const optimization = await optimizeExistingImage(
           inputBuffer,
-          inputMimeType
+          inputMimeType,
+          sharp
         );
 
         if (!optimization.wasOptimized) {
