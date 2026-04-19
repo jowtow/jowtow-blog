@@ -75,6 +75,12 @@ export async function POST(request: NextRequest) {
     let outputMimeType = file.type;
     let outputExtension = originalExtension;
     let optimizationQuality: number | null = null;
+    const useOriginalBuffer = () => {
+      optimizedBuffer = buffer;
+      outputMimeType = file.type;
+      outputExtension = originalExtension;
+      optimizationQuality = null;
+    };
 
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
@@ -94,11 +100,11 @@ export async function POST(request: NextRequest) {
             .clone()
             .webp({ quality, alphaQuality: 90, effort: 4 })
             .toBuffer();
-          optimizationQuality = quality;
-          optimizedBuffer = candidate;
-          outputMimeType = 'image/webp';
-          outputExtension = 'webp';
           if (candidate.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
+            optimizationQuality = quality;
+            optimizedBuffer = candidate;
+            outputMimeType = 'image/webp';
+            outputExtension = 'webp';
             isBelowSizeLimit = true;
             break;
           }
@@ -111,10 +117,7 @@ export async function POST(request: NextRequest) {
 
       if (!isBelowSizeLimit) {
         if (buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES) {
-          optimizedBuffer = buffer;
-          outputMimeType = file.type;
-          outputExtension = originalExtension;
-          optimizationQuality = null;
+          useOriginalBuffer();
         } else {
           return NextResponse.json(
             {
@@ -127,13 +130,11 @@ export async function POST(request: NextRequest) {
       }
 
       if (
+        isBelowSizeLimit &&
         optimizedBuffer.length >= buffer.length &&
         buffer.length <= MAX_OUTPUT_FILE_SIZE_BYTES
       ) {
-        optimizedBuffer = buffer;
-        outputMimeType = file.type;
-        outputExtension = originalExtension;
-        optimizationQuality = null;
+        useOriginalBuffer();
       }
     }
 
