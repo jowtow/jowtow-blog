@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import PostEditor from '@/components/PostEditor/PostEditor';
 import SeriesManager from '@/components/SeriesManager/SeriesManager';
 import CollectionsManager from '@/components/CollectionsManager/CollectionsManager';
+import ImagesManager from '@/components/ImagesManager/ImagesManager';
 
 type AdminPost = {
   title: string;
@@ -19,7 +20,9 @@ type AdminPost = {
 export default function AdminPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'series' | 'collections'>('dashboard');
+  const [activeTab, setActiveTab] = useState<
+    'dashboard' | 'create' | 'series' | 'collections' | 'images'
+  >('dashboard');
   const [posts, setPosts] = useState<AdminPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
@@ -133,6 +136,16 @@ export default function AdminPage() {
             >
               Collections
             </button>
+            <button
+              onClick={() => setActiveTab('images')}
+              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
+                activeTab === 'images'
+                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
+              }`}
+            >
+              Images
+            </button>
           </div>
 
           <div className="p-6">
@@ -189,6 +202,12 @@ export default function AdminPage() {
                       className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
                     >
                       Manage Collections
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('images')}
+                      className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                    >
+                      Manage Images
                     </button>
                   </div>
                 </div>
@@ -279,6 +298,8 @@ export default function AdminPage() {
             {activeTab === 'series' && <SeriesManager />}
 
             {activeTab === 'collections' && <CollectionsManager />}
+
+            {activeTab === 'images' && <ImagesManager />}
           </div>
         </div>
       </div>

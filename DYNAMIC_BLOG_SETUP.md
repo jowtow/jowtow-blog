@@ -95,6 +95,7 @@ Your markdown editor supports GitHub Flavored Markdown:
 - Supported formats: JPEG, PNG, GIF, WebP, etc.
 - Images are cached for 1 year once uploaded
 - URLs follow the pattern: `/api/images/[timestamp]-[filename]`
+- The Admin → Images tab lets you review blob images, re-run optimization, and delete unused files
 
 ## Data Storage
 
