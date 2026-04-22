@@ -76,6 +76,36 @@ function getMetadataString(metadata: ImageMetadata, key: string): string | undef
   return undefined;
 }
 
+function parseNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function applyResolvedSize(metadata: ImageMetadata, size: number) {
+  if (!metadata.optimizedSize) {
+    metadata.optimizedSize = size.toString();
+  }
+  if (!metadata.originalSize) {
+    metadata.originalSize = size.toString();
+  }
+}
+
+function getBlobSize(blob: unknown): number | null {
+  if (!blob || typeof blob !== 'object') {
+    return null;
+  }
+  if (!('size' in blob)) {
+    return null;
+  }
+  return parseNumber((blob as { size?: unknown }).size);
+}
+
 function resolveMimeType(metadata: ImageMetadata, key: string): string {
   return (
     getMetadataString(metadata, 'mimeType') ||
@@ -179,26 +209,72 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    let optimizationAvailable = true;
+    let optimizationError: string | undefined;
+
+    try {
+      await getSharp();
+    } catch (error) {
+      optimizationAvailable = false;
+      optimizationError =
+        error instanceof Error
+          ? error.message
+          : 'Image optimization is unavailable in this deployment.';
+    }
+
     const store = getStore('images');
     const listResult = await store.list();
 
     const entries: ImageListEntry[] = await Promise.all(
-      listResult.blobs.map(async (blob: { key: string }) => {
-        const metadataResult = await store.getMetadata(blob.key);
-        return {
-          key: blob.key,
-          url: createImageUrl(blob.key),
-          metadata: metadataResult?.metadata ?? {},
-        };
+      listResult.blobs.map(async (blob) => {
+        try {
+          const metadataResult = await store.getMetadata(blob.key);
+          const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
+          const blobSize = getBlobSize(blob);
+          const resolvedSize =
+            parseNumber(metadata.optimizedSize) ??
+            parseNumber(metadata.originalSize) ??
+            blobSize;
+
+          if (resolvedSize !== null) {
+            applyResolvedSize(metadata, resolvedSize);
+          }
+
+          return {
+            key: blob.key,
+            url: createImageUrl(blob.key),
+            metadata,
+          };
+        } catch (error) {
+          console.error(`Error loading metadata for image ${blob.key}:`, error);
+          return {
+            key: blob.key,
+            url: createImageUrl(blob.key),
+            metadata: {},
+          };
+        }
       })
     );
 
-    return NextResponse.json(entries);
+    return NextResponse.json({
+      images: entries,
+      optimizationAvailable,
+      optimizationError,
+    });
   } catch (error) {
     console.error('Error fetching images:', error);
+    const isBlobsConfigError =
+      error instanceof Error &&
+      (error.name === 'MissingBlobsEnvironmentError' ||
+        error.message.includes('MissingBlobsEnvironmentError') ||
+        error.message.includes('Netlify Blobs'));
     return NextResponse.json(
-      { error: 'Failed to fetch images' },
-      { status: 500 }
+      {
+        error: isBlobsConfigError
+          ? 'Image storage is unavailable in this deployment.'
+          : 'Failed to fetch images',
+      },
+      { status: isBlobsConfigError ? 503 : 500 }
     );
   }
 }
