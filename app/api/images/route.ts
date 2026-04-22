@@ -227,30 +227,32 @@ export async function GET(request: NextRequest) {
 
     const entries: ImageListEntry[] = await Promise.all(
       listResult.blobs.map(async (blob) => {
-        const metadataResult = await store.getMetadata(blob.key);
-        const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
-        const blobSize = getBlobSize(blob);
-        const resolvedSize =
-          parseNumber(metadata.optimizedSize) ??
-          parseNumber(metadata.originalSize) ??
-          blobSize;
+        try {
+          const metadataResult = await store.getMetadata(blob.key);
+          const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
+          const blobSize = getBlobSize(blob);
+          const resolvedSize =
+            parseNumber(metadata.optimizedSize) ??
+            parseNumber(metadata.originalSize) ??
+            blobSize;
 
-        if (resolvedSize !== null) {
-          applyResolvedSize(metadata, resolvedSize);
-        } else {
-          const record = await store.getWithMetadata(blob.key, {
-            type: 'arrayBuffer',
-          });
-          if (record?.data) {
-            applyResolvedSize(metadata, record.data.byteLength);
+          if (resolvedSize !== null) {
+            applyResolvedSize(metadata, resolvedSize);
           }
-        }
 
-        return {
-          key: blob.key,
-          url: createImageUrl(blob.key),
-          metadata,
-        };
+          return {
+            key: blob.key,
+            url: createImageUrl(blob.key),
+            metadata,
+          };
+        } catch (error) {
+          console.error(`Error loading metadata for image ${blob.key}:`, error);
+          return {
+            key: blob.key,
+            url: createImageUrl(blob.key),
+            metadata: {},
+          };
+        }
       })
     );
 
@@ -261,9 +263,15 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching images:', error);
+    const isBlobsConfigError =
+      error instanceof Error && error.name === 'MissingBlobsEnvironmentError';
     return NextResponse.json(
-      { error: 'Failed to fetch images' },
-      { status: 500 }
+      {
+        error: isBlobsConfigError
+          ? 'Image storage is unavailable in this deployment.'
+          : 'Failed to fetch images',
+      },
+      { status: isBlobsConfigError ? 503 : 500 }
     );
   }
 }
