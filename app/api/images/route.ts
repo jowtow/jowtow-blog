@@ -76,6 +76,17 @@ function getMetadataString(metadata: ImageMetadata, key: string): string | undef
   return undefined;
 }
 
+function parseNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function resolveMimeType(metadata: ImageMetadata, key: string): string {
   return (
     getMetadataString(metadata, 'mimeType') ||
@@ -179,21 +190,74 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    let optimizationAvailable = true;
+    let optimizationError: string | undefined;
+
+    try {
+      await getSharp();
+    } catch (error) {
+      optimizationAvailable = false;
+      optimizationError =
+        error instanceof Error
+          ? error.message
+          : 'Image optimization is unavailable in this deployment.';
+    }
+
     const store = getStore('images');
     const listResult = await store.list();
 
     const entries: ImageListEntry[] = await Promise.all(
-      listResult.blobs.map(async (blob: { key: string }) => {
+      listResult.blobs.map(async (blob: { key: string; size?: number }) => {
         const metadataResult = await store.getMetadata(blob.key);
+        const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
+        let resolvedSize =
+          parseNumber(metadata.optimizedSize) ?? parseNumber(metadata.originalSize);
+        const blobSize = typeof blob.size === 'number' ? blob.size : null;
+        let shouldFetchBlob = false;
+
+        if (resolvedSize === null && blobSize !== null) {
+          resolvedSize = blobSize;
+        }
+
+        if (resolvedSize === null) {
+          shouldFetchBlob = true;
+        } else {
+          if (!metadata.optimizedSize) {
+            metadata.optimizedSize = resolvedSize.toString();
+          }
+          if (!metadata.originalSize) {
+            metadata.originalSize = resolvedSize.toString();
+          }
+        }
+
+        if (shouldFetchBlob) {
+          const record = await store.getWithMetadata(blob.key, {
+            type: 'arrayBuffer',
+          });
+          if (record?.data) {
+            resolvedSize = record.data.byteLength;
+            if (!metadata.optimizedSize) {
+              metadata.optimizedSize = resolvedSize.toString();
+            }
+            if (!metadata.originalSize) {
+              metadata.originalSize = resolvedSize.toString();
+            }
+          }
+        }
+
         return {
           key: blob.key,
           url: createImageUrl(blob.key),
-          metadata: metadataResult?.metadata ?? {},
+          metadata,
         };
       })
     );
 
-    return NextResponse.json(entries);
+    return NextResponse.json({
+      images: entries,
+      optimizationAvailable,
+      optimizationError,
+    });
   } catch (error) {
     console.error('Error fetching images:', error);
     return NextResponse.json(

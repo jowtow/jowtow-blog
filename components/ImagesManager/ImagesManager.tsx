@@ -11,6 +11,14 @@ type ImageEntry = {
   metadata: ImageMetadata;
 };
 
+type ImagesResponse =
+  | ImageEntry[]
+  | {
+      images: ImageEntry[];
+      optimizationAvailable?: boolean;
+      optimizationError?: string;
+    };
+
 type OptimizeSummary = {
   optimizedCount: number;
   skippedCount: number;
@@ -86,6 +94,8 @@ export default function ImagesManager() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [optimizationAvailable, setOptimizationAvailable] = useState(true);
+  const [optimizationError, setOptimizationError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const isLocalBypassEnabled =
     typeof window !== "undefined" &&
@@ -142,18 +152,32 @@ export default function ImagesManager() {
         throw new Error(errorData.error || "Failed to load images");
       }
 
-      const data = (await response.json()) as ImageEntry[];
+      const data = (await response.json()) as ImagesResponse;
+      const entries = Array.isArray(data) ? data : data.images ?? [];
+      const canOptimize = Array.isArray(data)
+        ? true
+        : data.optimizationAvailable !== false;
+      const optimizationMessage = Array.isArray(data)
+        ? null
+        : data.optimizationError ?? null;
       const parseTimestamp = (value?: string) => {
         const parsed = Date.parse(value ?? "");
         return Number.isNaN(parsed) ? 0 : parsed;
       };
-      const sorted = [...data].sort((a, b) => {
+      const sorted = [...entries].sort((a, b) => {
         const left = parseTimestamp(getMetadataString(a.metadata, "uploadedAt"));
         const right = parseTimestamp(getMetadataString(b.metadata, "uploadedAt"));
         return right - left;
       });
 
       setImages(sorted);
+      setOptimizationAvailable(canOptimize);
+      setOptimizationError(
+        canOptimize
+          ? null
+          : optimizationMessage ??
+              "Image optimization is unavailable in this deployment."
+      );
       setSelectedKeys((prev) => {
         const available = new Set(sorted.map((image) => image.key));
         const next = new Set<string>();
@@ -217,6 +241,13 @@ export default function ImagesManager() {
   const handleOptimize = async (keys: string[], optimizeAll: boolean) => {
     if (!authToken && !isLocalBypassEnabled) {
       setError("Authentication token not available. Please refresh the page.");
+      return;
+    }
+
+    if (!optimizationAvailable) {
+      setError(
+        optimizationError ?? "Image optimization is unavailable in this deployment."
+      );
       return;
     }
 
@@ -358,6 +389,12 @@ export default function ImagesManager() {
         </div>
       )}
 
+      {!optimizationAvailable && (
+        <div className="mb-4 rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-amber-100">
+          {optimizationError ?? "Image optimization is unavailable in this deployment."}
+        </div>
+      )}
+
       <div className="mb-6 rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -386,14 +423,21 @@ export default function ImagesManager() {
             <button
               onClick={() => handleOptimize(Array.from(selectedKeys), false)}
               className="px-4 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] hover:brightness-95 font-semibold rounded-md cursor-pointer transition disabled:opacity-50"
-              disabled={selectedKeys.size === 0 || optimizing || deleting}
+              disabled={
+                !optimizationAvailable ||
+                selectedKeys.size === 0 ||
+                optimizing ||
+                deleting
+              }
             >
               Optimize selected
             </button>
             <button
               onClick={() => handleOptimize([], true)}
               className="px-4 py-2 border border-[var(--color-primary)]/60 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15 rounded-md cursor-pointer transition disabled:opacity-50"
-              disabled={images.length === 0 || optimizing || deleting}
+              disabled={
+                !optimizationAvailable || images.length === 0 || optimizing || deleting
+              }
             >
               Optimize all
             </button>
@@ -432,6 +476,8 @@ export default function ImagesManager() {
                 ? "Optimizing..."
                 : deleting
                   ? "Deleting..."
+                  : !optimizationAvailable
+                    ? "Optimization unavailable for this deployment."
                   : "Bulk actions apply to selected items."}
             </span>
           </div>
@@ -498,7 +544,7 @@ export default function ImagesManager() {
                     <button
                       onClick={() => handleOptimize([image.key], false)}
                       className="px-3 py-2 border border-[var(--color-primary)]/60 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/15 rounded-md text-sm transition disabled:opacity-50"
-                      disabled={optimizing || deleting}
+                      disabled={!optimizationAvailable || optimizing || deleting}
                     >
                       Optimize
                     </button>
