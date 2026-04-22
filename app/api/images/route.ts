@@ -96,6 +96,17 @@ function applyResolvedSize(metadata: ImageMetadata, size: number) {
   }
 }
 
+function getBlobSize(blob: unknown): number | null {
+  if (!blob || typeof blob !== 'object') {
+    return null;
+  }
+  if (!('size' in blob)) {
+    return null;
+  }
+  const size = (blob as { size?: unknown }).size;
+  return typeof size === 'number' ? size : null;
+}
+
 function resolveMimeType(metadata: ImageMetadata, key: string): string {
   return (
     getMetadataString(metadata, 'mimeType') ||
@@ -219,28 +230,20 @@ export async function GET(request: NextRequest) {
       listResult.blobs.map(async (blob) => {
         const metadataResult = await store.getMetadata(blob.key);
         const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
-        let resolvedSize =
-          parseNumber(metadata.optimizedSize) ?? parseNumber(metadata.originalSize);
-        const blobSize = (blob as { size?: number }).size;
-        let shouldFetchBlob = false;
+        const blobSize = getBlobSize(blob);
+        const resolvedSize =
+          parseNumber(metadata.optimizedSize) ??
+          parseNumber(metadata.originalSize) ??
+          blobSize;
 
-        if (resolvedSize === null && typeof blobSize === 'number') {
-          resolvedSize = blobSize;
-        }
-
-        if (resolvedSize === null) {
-          shouldFetchBlob = true;
-        } else {
+        if (resolvedSize !== null) {
           applyResolvedSize(metadata, resolvedSize);
-        }
-
-        if (shouldFetchBlob) {
+        } else {
           const record = await store.getWithMetadata(blob.key, {
             type: 'arrayBuffer',
           });
           if (record?.data) {
-            resolvedSize = record.data.byteLength;
-            applyResolvedSize(metadata, resolvedSize);
+            applyResolvedSize(metadata, record.data.byteLength);
           }
         }
 
