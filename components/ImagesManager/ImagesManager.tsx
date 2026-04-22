@@ -159,7 +159,7 @@ export default function ImagesManager() {
       const entries = Array.isArray(data) ? data : data.images ?? [];
       const canOptimize = Array.isArray(data)
         ? true
-        : data.optimizationAvailable ?? true;
+        : data.optimizationAvailable ?? false;
       const optimizationMessage = Array.isArray(data)
         ? null
         : data.optimizationError ?? null;

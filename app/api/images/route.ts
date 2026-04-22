@@ -103,8 +103,7 @@ function getBlobSize(blob: unknown): number | null {
   if (!('size' in blob)) {
     return null;
   }
-  const size = (blob as { size?: unknown }).size;
-  return typeof size === 'number' ? size : null;
+  return parseNumber((blob as { size?: unknown }).size);
 }
 
 function resolveMimeType(metadata: ImageMetadata, key: string): string {
