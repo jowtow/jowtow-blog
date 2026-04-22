@@ -216,15 +216,15 @@ export async function GET(request: NextRequest) {
     const listResult = await store.list();
 
     const entries: ImageListEntry[] = await Promise.all(
-      listResult.blobs.map(async (blob: { key: string; size?: number }) => {
+      listResult.blobs.map(async (blob) => {
         const metadataResult = await store.getMetadata(blob.key);
         const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
         let resolvedSize =
           parseNumber(metadata.optimizedSize) ?? parseNumber(metadata.originalSize);
-        const blobSize = typeof blob.size === 'number' ? blob.size : null;
+        const blobSize = (blob as { size?: number }).size;
         let shouldFetchBlob = false;
 
-        if (resolvedSize === null && blobSize !== null) {
+        if (resolvedSize === null && typeof blobSize === 'number') {
           resolvedSize = blobSize;
         }
 

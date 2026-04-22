@@ -19,6 +19,9 @@ type ImagesResponse =
       optimizationError?: string;
     };
 
+const OPTIMIZATION_UNAVAILABLE_MESSAGE =
+  "Image optimization is unavailable in this deployment.";
+
 type OptimizeSummary = {
   optimizedCount: number;
   skippedCount: number;
@@ -156,7 +159,7 @@ export default function ImagesManager() {
       const entries = Array.isArray(data) ? data : data.images ?? [];
       const canOptimize = Array.isArray(data)
         ? true
-        : data.optimizationAvailable !== false;
+        : data.optimizationAvailable ?? true;
       const optimizationMessage = Array.isArray(data)
         ? null
         : data.optimizationError ?? null;
@@ -175,8 +178,7 @@ export default function ImagesManager() {
       setOptimizationError(
         canOptimize
           ? null
-          : optimizationMessage ??
-              "Image optimization is unavailable in this deployment."
+          : optimizationMessage ?? OPTIMIZATION_UNAVAILABLE_MESSAGE
       );
       setSelectedKeys((prev) => {
         const available = new Set(sorted.map((image) => image.key));
@@ -245,9 +247,7 @@ export default function ImagesManager() {
     }
 
     if (!optimizationAvailable) {
-      setError(
-        optimizationError ?? "Image optimization is unavailable in this deployment."
-      );
+      setError(optimizationError ?? OPTIMIZATION_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -391,7 +391,7 @@ export default function ImagesManager() {
 
       {!optimizationAvailable && (
         <div className="mb-4 rounded-md border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-amber-100">
-          {optimizationError ?? "Image optimization is unavailable in this deployment."}
+          {optimizationError ?? OPTIMIZATION_UNAVAILABLE_MESSAGE}
         </div>
       )}
 
