@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-import sharp from 'sharp';
+import { getSharp, type SharpFactory } from '@/lib/sharpLoader';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_INPUT_FILE_SIZE_BYTES = 20 * 1024 * 1024;
@@ -82,7 +82,28 @@ export async function POST(request: NextRequest) {
       optimizationQuality = null;
     };
 
+    let sharpFactory: SharpFactory | null = null;
+
     if (!PASSTHROUGH_MIME_TYPES.has(file.type)) {
+      try {
+        sharpFactory = await getSharp();
+      } catch (error) {
+        if (buffer.length > MAX_OUTPUT_FILE_SIZE_BYTES) {
+          return NextResponse.json(
+            {
+              error:
+                'Image optimization is unavailable and the file exceeds the 5MB limit. Please upload a smaller image.',
+              details: error instanceof Error ? error.message : undefined,
+            },
+            { status: 503 }
+          );
+        }
+
+        sharpFactory = null;
+      }
+    }
+
+    if (sharpFactory && !PASSTHROUGH_MIME_TYPES.has(file.type)) {
       let isBelowSizeLimit = false;
 
       const resizeTargets =
@@ -91,7 +112,7 @@ export async function POST(request: NextRequest) {
           : RESIZE_DIMENSIONS;
 
       for (const maxDimension of resizeTargets) {
-        const pipeline = sharp(buffer, { failOnError: false })
+        const pipeline = sharpFactory(buffer, { failOnError: false })
           .rotate()
           .resize({
             width: maxDimension,

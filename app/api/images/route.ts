@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
-import sharp from 'sharp';
+import { getSharp, type SharpFactory } from '@/lib/sharpLoader';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -88,7 +88,11 @@ function createImageUrl(key: string): string {
   return `/api/images/${encodeURIComponent(key)}`;
 }
 
-async function optimizeExistingImage(buffer: Buffer, mimeType: string): Promise<OptimizeOutcome> {
+async function optimizeExistingImage(
+  buffer: Buffer,
+  mimeType: string,
+  sharpFactory: SharpFactory
+): Promise<OptimizeOutcome> {
   if (PASSTHROUGH_MIME_TYPES.has(mimeType)) {
     return {
       buffer,
@@ -111,7 +115,7 @@ async function optimizeExistingImage(buffer: Buffer, mimeType: string): Promise<
   let withinLimitQuality: number | null = null;
 
   for (const maxDimension of resizeTargets) {
-    const pipeline = sharp(buffer, { failOnError: false })
+    const pipeline = sharpFactory(buffer, { failOnError: false })
       .rotate()
       .resize({
         width: maxDimension,
@@ -222,6 +226,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let sharpFactory: SharpFactory;
+    try {
+      sharpFactory = await getSharp();
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: 'Image optimization is unavailable in this deployment.',
+          details: error instanceof Error ? error.message : undefined,
+        },
+        { status: 503 }
+      );
+    }
+
     const store = getStore('images');
     const targetKeys = optimizeAll
       ? (await store.list()).blobs.map((blob: { key: string }) => blob.key)
@@ -256,7 +273,8 @@ export async function POST(request: NextRequest) {
         const inputMimeType = resolveMimeType(metadata, key);
         const optimization = await optimizeExistingImage(
           inputBuffer,
-          inputMimeType
+          inputMimeType,
+          sharpFactory
         );
 
         if (!optimization.wasOptimized) {
