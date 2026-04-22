@@ -81,10 +81,19 @@ function parseNumber(value: unknown): number | null {
     return Number.isFinite(value) ? value : null;
   }
   if (typeof value === 'string') {
-    const parsed = Number.parseInt(value, 10);
+    const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function applyResolvedSize(metadata: ImageMetadata, size: number) {
+  if (!metadata.optimizedSize) {
+    metadata.optimizedSize = size.toString();
+  }
+  if (!metadata.originalSize) {
+    metadata.originalSize = size.toString();
+  }
 }
 
 function resolveMimeType(metadata: ImageMetadata, key: string): string {
@@ -222,12 +231,7 @@ export async function GET(request: NextRequest) {
         if (resolvedSize === null) {
           shouldFetchBlob = true;
         } else {
-          if (!metadata.optimizedSize) {
-            metadata.optimizedSize = resolvedSize.toString();
-          }
-          if (!metadata.originalSize) {
-            metadata.originalSize = resolvedSize.toString();
-          }
+          applyResolvedSize(metadata, resolvedSize);
         }
 
         if (shouldFetchBlob) {
@@ -236,12 +240,7 @@ export async function GET(request: NextRequest) {
           });
           if (record?.data) {
             resolvedSize = record.data.byteLength;
-            if (!metadata.optimizedSize) {
-              metadata.optimizedSize = resolvedSize.toString();
-            }
-            if (!metadata.originalSize) {
-              metadata.originalSize = resolvedSize.toString();
-            }
+            applyResolvedSize(metadata, resolvedSize);
           }
         }
 
