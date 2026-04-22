@@ -264,7 +264,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching images:', error);
     const isBlobsConfigError =
-      error instanceof Error && error.name === 'MissingBlobsEnvironmentError';
+      error instanceof Error &&
+      (error.name === 'MissingBlobsEnvironmentError' ||
+        error.message.includes('MissingBlobsEnvironmentError') ||
+        error.message.includes('Netlify Blobs'));
     return NextResponse.json(
       {
         error: isBlobsConfigError
