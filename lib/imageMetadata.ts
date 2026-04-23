@@ -10,6 +10,9 @@ export const parseNumber = (value: unknown): number | null => {
     return Number.isFinite(value) ? value : null;
   }
   if (typeof value === 'bigint') {
+    if (value < BigInt(0)) {
+      return null;
+    }
     const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
     if (value > maxSafe || value < -maxSafe) {
       return null;
@@ -24,14 +27,17 @@ export const parseNumber = (value: unknown): number | null => {
   return null;
 };
 
-const applyResolvedSize = (metadata: ImageMetadata, size: number) => {
-  if (metadata.optimizedSize == null || metadata.optimizedSize === '') {
-    metadata.optimizedSize = size.toString();
-  }
-  if (metadata.originalSize == null || metadata.originalSize === '') {
-    metadata.originalSize = size.toString();
-  }
-};
+const applyResolvedSize = (metadata: ImageMetadata, size: number): ImageMetadata => ({
+  ...metadata,
+  optimizedSize:
+    metadata.optimizedSize == null || metadata.optimizedSize === ''
+      ? size.toString()
+      : metadata.optimizedSize,
+  originalSize:
+    metadata.originalSize == null || metadata.originalSize === ''
+      ? size.toString()
+      : metadata.originalSize,
+});
 
 export async function resolveImageMetadataWithSize(
   store: ImageMetadataStore,
@@ -63,7 +69,7 @@ export async function resolveImageMetadataWithSize(
   }
 
   if (resolvedSize !== null) {
-    applyResolvedSize(metadata, resolvedSize);
+    return applyResolvedSize(metadata, resolvedSize);
   }
 
   return metadata;
