@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStore } from '@netlify/blobs';
 import { getSharp, type SharpFactory } from '@/lib/sharpLoader';
+import { parseNumber, resolveImageMetadataWithSize } from '@/lib/imageMetadata';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -74,26 +75,6 @@ function getMetadataString(metadata: ImageMetadata, key: string): string | undef
     return value.toString();
   }
   return undefined;
-}
-
-function parseNumber(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function applyResolvedSize(metadata: ImageMetadata, size: number) {
-  if (!metadata.optimizedSize) {
-    metadata.optimizedSize = size.toString();
-  }
-  if (!metadata.originalSize) {
-    metadata.originalSize = size.toString();
-  }
 }
 
 function getBlobSize(blob: unknown): number | null {
@@ -228,17 +209,11 @@ export async function GET(request: NextRequest) {
     const entries: ImageListEntry[] = await Promise.all(
       listResult.blobs.map(async (blob) => {
         try {
-          const metadataResult = await store.getMetadata(blob.key);
-          const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
-          const blobSize = getBlobSize(blob);
-          const resolvedSize =
-            parseNumber(metadata.optimizedSize) ??
-            parseNumber(metadata.originalSize) ??
-            blobSize;
-
-          if (resolvedSize !== null) {
-            applyResolvedSize(metadata, resolvedSize);
-          }
+          const metadata = await resolveImageMetadataWithSize(
+            store,
+            blob.key,
+            getBlobSize(blob)
+          );
 
           return {
             key: blob.key,
