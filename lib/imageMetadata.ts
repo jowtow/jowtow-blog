@@ -10,6 +10,10 @@ export const parseNumber = (value: unknown): number | null => {
     return Number.isFinite(value) ? value : null;
   }
   if (typeof value === 'bigint') {
+    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+    if (value > maxSafe || value < -maxSafe) {
+      return null;
+    }
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : null;
   }
@@ -21,10 +25,10 @@ export const parseNumber = (value: unknown): number | null => {
 };
 
 const applyResolvedSize = (metadata: ImageMetadata, size: number) => {
-  if (metadata.optimizedSize === undefined || metadata.optimizedSize === '') {
+  if (metadata.optimizedSize == null || metadata.optimizedSize === '') {
     metadata.optimizedSize = size.toString();
   }
-  if (metadata.originalSize === undefined || metadata.originalSize === '') {
+  if (metadata.originalSize == null || metadata.originalSize === '') {
     metadata.originalSize = size.toString();
   }
 };
