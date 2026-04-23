@@ -16,7 +16,7 @@ export async function generateStaticParams() {
 export default async function CollectionPage({
   params,
 }: {
-  params: CollectionParam;
+  params: Promise<CollectionParam>;
 }) {
   const collection = await getCollectionBySlug((await params).slug);
 

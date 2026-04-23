@@ -15,7 +15,7 @@ export async function generateStaticParams() {
 export default async function SeriesListing({
   params,
 }: {
-  params: SeriesParam;
+  params: Promise<SeriesParam>;
 }) {
   const series = await getSeriesByName((await params).seriesname);
   return (

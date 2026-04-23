@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "netlify:dev": "netlify dev",
-    "build": "next build --turbopack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts"
