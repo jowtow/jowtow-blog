@@ -29,14 +29,8 @@ export const parseNumber = (value: unknown): number | null => {
 
 const applyResolvedSize = (metadata: ImageMetadata, size: number): ImageMetadata => ({
   ...metadata,
-  optimizedSize:
-    metadata.optimizedSize == null || metadata.optimizedSize === ''
-      ? size.toString()
-      : metadata.optimizedSize,
-  originalSize:
-    metadata.originalSize == null || metadata.originalSize === ''
-      ? size.toString()
-      : metadata.originalSize,
+  optimizedSize: size.toString(),
+  originalSize: size.toString(),
 });
 
 export async function resolveImageMetadataWithSize(
@@ -54,10 +48,9 @@ export async function resolveImageMetadataWithSize(
   }
 
   const metadata: ImageMetadata = { ...(metadataResult?.metadata ?? {}) };
-  let resolvedSize =
-    parseNumber(metadata.optimizedSize) ??
-    parseNumber(metadata.originalSize) ??
-    parseNumber(blobSize);
+  const optimizedSize = parseNumber(metadata.optimizedSize);
+  const originalSize = parseNumber(metadata.originalSize);
+  let resolvedSize = optimizedSize ?? originalSize ?? parseNumber(blobSize);
 
   if (resolvedSize === null) {
     try {
@@ -68,7 +61,7 @@ export async function resolveImageMetadataWithSize(
     }
   }
 
-  if (resolvedSize !== null) {
+  if (resolvedSize !== null && optimizedSize === null && originalSize === null) {
     return applyResolvedSize(metadata, resolvedSize);
   }
 

@@ -45,7 +45,25 @@ test('respects existing metadata sizes', async () => {
 
   const metadata = await resolveImageMetadataWithSize(store, 'image.jpg', null);
 
-  assert.equal(metadata.originalSize, '512');
   assert.equal(metadata.optimizedSize, '512');
+  assert.equal(metadata.originalSize, undefined);
   assert.equal(getCalls(), 0);
+});
+
+test('returns metadata when size resolution fails', async () => {
+  const store = {
+    async getMetadata(_key: string) {
+      throw new Error('metadata failure');
+    },
+    async get(_key: string, _options: { type: 'arrayBuffer' }) {
+      throw new Error('fetch failure');
+    },
+  };
+
+  const metadata = await resolveImageMetadataWithSize(store, 'image.jpg', null, {
+    error: () => {},
+  });
+
+  assert.equal(metadata.originalSize, undefined);
+  assert.equal(metadata.optimizedSize, undefined);
 });
