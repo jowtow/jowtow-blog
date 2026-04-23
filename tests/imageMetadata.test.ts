@@ -43,7 +43,7 @@ test('falls back to blob data size when metadata is missing', async () => {
 test('respects existing metadata sizes', async () => {
   const { store, getCalls } = createStore({ optimizedSize: '512' }, 1024);
 
-  const metadata = await resolveImageMetadataWithSize(store, 'image.jpg');
+  const metadata = await resolveImageMetadataWithSize(store, 'image.jpg', null);
 
   assert.equal(metadata.originalSize, '512');
   assert.equal(metadata.optimizedSize, '512');

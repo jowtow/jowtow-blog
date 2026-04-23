@@ -14,7 +14,7 @@ export const parseNumber = (value: unknown): number | null => {
       return null;
     }
     const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-    if (value > maxSafe || value < -maxSafe) {
+    if (value > maxSafe) {
       return null;
     }
     const numeric = Number(value);
