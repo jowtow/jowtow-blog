@@ -21,7 +21,7 @@ export async function generateStaticParams() {
   return postSlugs;
 }
 
-export default async function BlogPost({ params }: { params: PostParam }) {
+export default async function BlogPost({ params }: { params: Promise<PostParam> }) {
   const post = await getPostBySlug((await params).postname);
 
   return (

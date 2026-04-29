@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "netlify:dev": "netlify dev",
-    "build": "next build --turbopack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@eslint/eslintrc": "^3.3.5",
@@ -42,6 +43,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "netlify-cli": "^24.11.1"
+    "netlify-cli": "^24.11.1",
+    "tsx": "^4.21.0"
   }
 }

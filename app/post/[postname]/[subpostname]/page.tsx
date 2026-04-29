@@ -30,7 +30,7 @@ export async function generateStaticParams() {
   return seriesSlugs;
 }
 
-export default async function BlogPost({ params }: { params: PostParam }) {
+export default async function BlogPost({ params }: { params: Promise<PostParam> }) {
   const subpostname = (await params).subpostname;
   const postname = (await params).postname;
   const post = await getPostBySlugAndSeries(subpostname, postname);
