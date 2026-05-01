@@ -9,6 +9,7 @@ import {
   type AdminCollectionMetadata,
   filterCollectionItems,
   getItemSummary,
+  resolveCollectionViewState,
 } from "./collectionsManagerUtils";
 
 const emptyCollectionForm: AdminCollectionMetadata = {
@@ -112,7 +113,59 @@ export default function CollectionsManager() {
     };
   }, [itemDrawerOpen]);
 
-  const loadCollections = async (preferredSlug?: string | null) => {
+  const applyCollectionViewState = (
+    collections: AdminCollection[],
+    options: {
+      preferredCollectionSlug?: string | null;
+      preferredItemSlug?: string | null;
+      preserveItemSearch?: boolean;
+      preserveItemDrawer?: boolean;
+      preserveItemPreview?: boolean;
+      clearFeedback?: boolean;
+    } = {},
+  ) => {
+    const nextState = resolveCollectionViewState(collections, {
+      preferredCollectionSlug: options.preferredCollectionSlug,
+      selectedCollectionSlug,
+      preferredItemSlug: options.preferredItemSlug,
+      selectedItemSlug,
+      itemDrawerOpen,
+      itemPreview,
+      itemSearch,
+      preserveItemSearch: options.preserveItemSearch,
+      preserveItemDrawer: options.preserveItemDrawer,
+      preserveItemPreview: options.preserveItemPreview,
+    });
+
+    setSelectedCollectionSlug(nextState.selectedCollectionSlug);
+    setCollectionForm(nextState.selectedCollection?.metadata ?? emptyCollectionForm);
+    setSelectedItemSlug(nextState.selectedItemSlug);
+    setItemForm(
+      nextState.selectedItem ?? {
+        ...emptyItemForm,
+        collectionSlug: nextState.selectedCollectionSlug ?? "",
+      },
+    );
+    setItemDrawerOpen(nextState.itemDrawerOpen);
+    setItemPreview(nextState.itemPreview);
+    setItemSearch(nextState.itemSearch);
+
+    if (options.clearFeedback ?? true) {
+      setError(null);
+      setSuccess(null);
+    }
+  };
+
+  const loadCollections = async (
+    options: {
+      preferredCollectionSlug?: string | null;
+      preferredItemSlug?: string | null;
+      preserveItemSearch?: boolean;
+      preserveItemDrawer?: boolean;
+      preserveItemPreview?: boolean;
+      clearFeedback?: boolean;
+    } = {},
+  ) => {
     setLoadingCollections(true);
     setError(null);
 
@@ -128,18 +181,13 @@ export default function CollectionsManager() {
       );
 
       setCollectionsList(sorted);
-
-      const nextSlug = preferredSlug ?? selectedCollectionSlug;
-      if (!nextSlug) {
-        return;
-      }
-
-      const matched = sorted.find((collection) => collection.metadata.slug === nextSlug);
-      if (matched) {
-        selectCollection(matched);
-      } else {
-        startNewCollection();
-      }
+      applyCollectionViewState(sorted, {
+        ...options,
+        preferredCollectionSlug:
+          options.preferredCollectionSlug !== undefined
+            ? options.preferredCollectionSlug
+            : selectedCollectionSlug,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load collections");
     } finally {
@@ -196,13 +244,9 @@ export default function CollectionsManager() {
   };
 
   const selectCollection = (collection: AdminCollection) => {
-    setSelectedCollectionSlug(collection.metadata.slug);
-    setCollectionForm(collection.metadata);
-    resetItemEditor(collection.metadata.slug);
-    setItemDrawerOpen(false);
-    setItemSearch("");
-    setError(null);
-    setSuccess(null);
+    applyCollectionViewState(collectionsList, {
+      preferredCollectionSlug: collection.metadata.slug,
+    });
   };
 
   const startNewCollection = () => {
@@ -381,7 +425,10 @@ export default function CollectionsManager() {
         : "Collection created successfully.";
       setSuccess(successMessage);
       setSelectedCollectionSlug(savedSlug);
-      await loadCollections(savedSlug);
+      await loadCollections({
+        preferredCollectionSlug: savedSlug,
+        clearFeedback: false,
+      });
       setSuccess(successMessage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save collection");
@@ -424,7 +471,10 @@ export default function CollectionsManager() {
       }
 
       startNewCollection();
-      await loadCollections(null);
+      await loadCollections({
+        preferredCollectionSlug: null,
+        clearFeedback: false,
+      });
       setSuccess("Collection deleted successfully.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete collection");
@@ -479,10 +529,14 @@ export default function CollectionsManager() {
         ? "Item updated successfully."
         : "Item created successfully.";
       setSuccess(successMessage);
-      await loadCollections(selectedCollectionSlug);
-      setSelectedItemSlug(savedItem.slug);
-      setItemForm(savedItem);
-      setItemDrawerOpen(true);
+      await loadCollections({
+        preferredCollectionSlug: selectedCollectionSlug,
+        preferredItemSlug: savedItem.slug,
+        preserveItemSearch: true,
+        preserveItemDrawer: true,
+        preserveItemPreview: true,
+        clearFeedback: false,
+      });
       setSuccess(successMessage);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save collection item");
@@ -525,9 +579,11 @@ export default function CollectionsManager() {
         throw new Error(errorData.error || "Failed to delete item");
       }
 
-      await loadCollections(selectedCollectionSlug);
-      resetItemEditor(selectedCollectionSlug);
-      setItemDrawerOpen(false);
+      await loadCollections({
+        preferredCollectionSlug: selectedCollectionSlug,
+        preserveItemSearch: true,
+        clearFeedback: false,
+      });
       setSuccess("Item deleted successfully.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete item");
