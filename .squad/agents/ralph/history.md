@@ -1,16 +1,11 @@
-# Project Context
-
-- **Project:** jowtow-blog
-- **Created:** 2026-05-01
+# Ralph — History
 
 ## Core Context
 
-Agent Ralph initialized and ready for work.
-
-## Recent Updates
-
-📌 Team initialized on 2026-05-01
+- **Project:** A Next.js blog with dynamic content, Netlify deployment, and identity management
+- **Role:** Work Monitor
+- **Joined:** 2026-05-01T11:58:01.412Z
 
 ## Learnings
 
-Initial setup complete.
+<!-- Append learnings below -->

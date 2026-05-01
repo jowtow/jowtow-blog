@@ -1,10 +1,10 @@
-# Scribe — History
+# Cook — History
 
 ## Core Context
 
 - **Project:** A Next.js blog with dynamic content, Netlify deployment, and identity management
-- **Role:** Session Logger
-- **Joined:** 2026-05-01T11:58:01.411Z
+- **Role:** Backend Dev
+- **Joined:** 2026-05-01T11:58:01.409Z
 
 ## Learnings
 
