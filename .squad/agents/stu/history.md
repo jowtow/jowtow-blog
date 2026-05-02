@@ -12,6 +12,7 @@
 - 2026-05-02T11:41:01.641+00:00: Clean admin width escape should be handled at a route/layout boundary, not with negative margins inside `app/admin/page.tsx`; `app/layout.tsx` currently applies the global `main.content` wrapper to all routes.
 - 2026-05-02T11:41:01.641+00:00: `app/admin/page.tsx` is the current admin shell and tab controller; keep per-tab width in a tab-to-layout-mode map so Collections/Series/Images can go wide while Dashboard/Create stay constrained without duplicating chrome.
 - 2026-05-02T11:41:01.641+00:00: `components/CollectionsManager/CollectionsManager.tsx` currently mixes collection selection, collection form, item browser, and item editor state in one client component; future churn drops if server-backed collection/item data state is separated from overlay/editor UI state.
+- 2026-05-02T11:41:01.641+00:00: In `components/CollectionsManager/CollectionsManager.tsx`, keep first-load auto-selection behind an explicit bootstrap flag so collection reloads do not depend on `selectedCollectionSlug` and overwrite the New/create state.
 
 ## Team Session Update
 
@@ -24,3 +25,12 @@
 - Per-tab layout modes working (wide for Collections/Series/Images; constrained for Dashboard/Create)
 - Validation passed; ready for deployment
 - Series/Images adoption and search/filter expansion deferred to next pass
+
+**2026-05-02T11:41:01.641+00:00: Collections Regression Fix (Stu)**
+
+- Admin redesign rejected on create-flow regression: auto-select effect tied to `selectedCollectionSlug` overwrote New state
+- Stu assigned (Ambrose locked out by reviewer decision)
+- Solution: Separated bootstrap auto-selection from reload behavior
+- New mode now persists until explicit user selection/save
+- Validation passed; regression fixed
+- Collections redesign ready for re-review

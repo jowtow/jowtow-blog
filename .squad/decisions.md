@@ -11,6 +11,9 @@
 - 2026-05-02: Item editing opens in a fullscreen overlay. On desktop, the overlay uses a split markdown editor/preview layout.
 - 2026-05-02: This redesign is layout-first. Search, filter, and sort expansion are deferred unless a minimal addition falls out naturally from the layout work.
 
+- 2026-05-02: Admin redesign review rejected due to create-flow regression. Blocker: auto-select effect tied to selectedCollectionSlug overwrites New state on reload. Required non-Ambrose revision.
+- 2026-05-02: Collections bootstrap selection guard — auto-select only on explicit bootstrap paths. Preserve create mode on user-driven deselection until explicit selection/save. Affects `components/CollectionsManager/CollectionsManager.tsx`.
+
 ## Governance
 
 - All meaningful changes require team consensus
