@@ -14,8 +14,10 @@ interface PostEditorProps {
     author?: string;
     date?: string;
   } | null;
-  onSuccess?: () => void;
-  onDelete?: () => void;
+  onSuccess?: (
+    savedSlug: string,
+  ) => Promise<PostEditorProps["initialPost"]> | PostEditorProps["initialPost"];
+  onDelete?: (deletedSlug: string) => Promise<void> | void;
   onCancel?: () => void;
 }
 
@@ -25,6 +27,13 @@ const emptyFormData = {
   markdown: "",
   image: "",
 };
+
+const toFormData = (post: NonNullable<PostEditorProps["initialPost"]>) => ({
+  title: post.title,
+  slug: post.slug,
+  markdown: post.markdown,
+  image: post.image || "",
+});
 
 export default function PostEditor({
   mode = "create",
@@ -80,12 +89,7 @@ export default function PostEditor({
 
   useEffect(() => {
     if (initialPost) {
-      setFormData({
-        title: initialPost.title,
-        slug: initialPost.slug,
-        markdown: initialPost.markdown,
-        image: initialPost.image || "",
-      });
+      setFormData(toFormData(initialPost));
       setPreview(false);
       setError(null);
       setSuccess(false);
@@ -281,13 +285,18 @@ export default function PostEditor({
         throw new Error(errorData.error || "Failed to create post");
       }
 
-      setSuccess(true);
+      const payload = (await response.json()) as {
+        data: {
+          slug: string;
+        };
+      };
+      const authoritativePost = await onSuccess?.(payload.data.slug);
 
-      if (mode === "create") {
-        setFormData(emptyFormData);
+      if (authoritativePost) {
+        setFormData(toFormData(authoritativePost));
       }
 
-      onSuccess?.();
+      setSuccess(true);
 
       setTimeout(() => setSuccess(false), 3000);
     } catch (submitError) {
@@ -335,7 +344,7 @@ export default function PostEditor({
       }
 
       setSuccess(false);
-      onDelete?.();
+      await onDelete?.(initialPost.slug);
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -350,12 +359,7 @@ export default function PostEditor({
   const resetForm = () => {
     setFormData(
       initialPost
-        ? {
-            title: initialPost.title,
-            slug: initialPost.slug,
-            markdown: initialPost.markdown,
-            image: initialPost.image || "",
-          }
+        ? toFormData(initialPost)
         : emptyFormData,
     );
     setPreview(false);

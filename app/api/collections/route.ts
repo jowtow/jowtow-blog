@@ -8,6 +8,7 @@ import {
 } from '@/lib/dynamicCollections';
 import { getStore } from '@netlify/blobs';
 import { verifyAdminAuth } from '@/lib/serverAuth';
+import { adminMutableJsonResponse } from '@/lib/adminApi';
 
 function revalidateCollectionPaths(slugs: string[]) {
   revalidatePath('/');
@@ -21,7 +22,7 @@ function revalidateCollectionPaths(slugs: string[]) {
 export async function GET() {
   try {
     const collections = await listDynamicCollections();
-    return NextResponse.json(collections);
+    return adminMutableJsonResponse(collections);
   } catch (error) {
     console.error('Error fetching collections:', error);
     return NextResponse.json({ error: 'Failed to fetch collections' }, { status: 500 });

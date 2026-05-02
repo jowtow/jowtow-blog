@@ -30,6 +30,14 @@ type AdminCollection = {
 type ItemEditorSurface = "edit" | "preview";
 type CollectionsMobilePanel = "collections" | "details" | "items";
 
+type LoadCollectionsOptions = {
+  preferredSlug?: string | null;
+  preferredItemSlug?: string | null;
+  autoSelectFirst?: boolean;
+  keepItemEditorOpen?: boolean;
+  preferredMobilePanel?: CollectionsMobilePanel;
+};
+
 const getTodayString = () => new Date().toISOString().split("T")[0];
 
 const createEmptyCollectionForm = (): AdminCollectionMetadata => ({
@@ -97,6 +105,8 @@ export default function CollectionsManager() {
   const [uploadingCollectionImage, setUploadingCollectionImage] = useState(false);
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
+  const selectedCollectionSlugRef = useRef<string | null>(null);
+  const selectedItemSlugRef = useRef<string | null>(null);
   const collectionCoverInputRef = useRef<HTMLInputElement>(null);
   const itemCoverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
@@ -137,6 +147,14 @@ export default function CollectionsManager() {
     getToken();
   }, [user]);
 
+  useEffect(() => {
+    selectedCollectionSlugRef.current = selectedCollectionSlug;
+  }, [selectedCollectionSlug]);
+
+  useEffect(() => {
+    selectedItemSlugRef.current = selectedItemSlug;
+  }, [selectedItemSlug]);
+
   const selectCollection = useCallback((collection: AdminCollection) => {
     setSelectedCollectionSlug(collection.metadata.slug);
     setCollectionForm(collection.metadata);
@@ -173,13 +191,16 @@ export default function CollectionsManager() {
   const loadCollections = useCallback(
     async ({
       preferredSlug,
+      preferredItemSlug,
       autoSelectFirst = false,
-    }: { preferredSlug?: string | null; autoSelectFirst?: boolean } = {}) => {
+      keepItemEditorOpen = false,
+      preferredMobilePanel,
+    }: LoadCollectionsOptions = {}) => {
       setLoadingCollections(true);
       setError(null);
 
       try {
-        const response = await fetch("/api/collections");
+        const response = await fetch("/api/collections", { cache: 'no-store' });
         if (!response.ok) {
           throw new Error("Failed to load collections");
         }
@@ -193,26 +214,60 @@ export default function CollectionsManager() {
 
         if (sortedCollections.length === 0) {
           startNewCollection();
-          return;
+          return {
+            collections: sortedCollections,
+            selectedCollection: null,
+            selectedItem: null,
+          };
         }
 
+        let matchedCollection: AdminCollection | null = null;
         if (preferredSlug) {
-          const matchedCollection =
+          matchedCollection =
             sortedCollections.find((collection) => collection.metadata.slug === preferredSlug) ??
             sortedCollections[0];
-          selectCollection(matchedCollection);
-          return;
+        } else if (autoSelectFirst) {
+          matchedCollection = sortedCollections[0];
         }
 
-        if (autoSelectFirst) {
-          selectCollection(sortedCollections[0]);
+        if (!matchedCollection) {
+          return {
+            collections: sortedCollections,
+            selectedCollection: null,
+            selectedItem: null,
+          };
         }
+
+        selectCollection(matchedCollection);
+
+        const nextSelectedItemSlug =
+          preferredItemSlug ??
+          (preferredSlug && preferredSlug === selectedCollectionSlugRef.current
+            ? selectedItemSlugRef.current
+            : null);
+        const matchedItem =
+          nextSelectedItemSlug
+            ? matchedCollection.items.find((item) => item.slug === nextSelectedItemSlug) ?? null
+            : null;
+
+        if (matchedItem) {
+          setSelectedItemSlug(matchedItem.slug);
+          setItemForm(matchedItem);
+          setMobilePanel(preferredMobilePanel ?? "items");
+        }
+
+        setItemEditorOpen(keepItemEditorOpen && Boolean(matchedItem));
+
+        return {
+          collections: sortedCollections,
+          selectedCollection: matchedCollection,
+          selectedItem: matchedItem,
+        };
       } catch (loadError) {
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Failed to load collections",
-        );
+        const message =
+          loadError instanceof Error ? loadError.message : "Failed to load collections";
+        setError(message);
+        throw new Error(message);
       } finally {
         setLoadingCollections(false);
       }
@@ -221,7 +276,7 @@ export default function CollectionsManager() {
   );
 
   useEffect(() => {
-    void loadCollections({ autoSelectFirst: true });
+    void loadCollections({ autoSelectFirst: true }).catch(() => undefined);
   }, [loadCollections]);
 
   useEffect(() => {
@@ -285,39 +340,6 @@ export default function CollectionsManager() {
     return currentCollection.items.slice();
   }, [currentCollection]);
 
-  const syncCollectionItems = useCallback(
-    (collectionSlug: string, items: AdminCollectionItem[], preferredItemSlug?: string | null) => {
-      setCollectionsList((previous) =>
-        previous.map((collection) =>
-          collection.metadata.slug === collectionSlug
-            ? {
-                ...collection,
-                items,
-              }
-            : collection
-        )
-      );
-
-      if (selectedCollectionSlug !== collectionSlug) {
-        return;
-      }
-
-      const nextSelectedItemSlug = preferredItemSlug ?? selectedItemSlug;
-      if (!nextSelectedItemSlug) {
-        return;
-      }
-
-      const matchedItem = items.find((item) => item.slug === nextSelectedItemSlug);
-      if (!matchedItem) {
-        return;
-      }
-
-      setSelectedItemSlug(matchedItem.slug);
-      setItemForm(matchedItem);
-    },
-    [selectedCollectionSlug, selectedItemSlug]
-  );
-
   const persistItemOrder = useCallback(
     async (nextItems: AdminCollectionItem[], preferredItemSlug: string, successMessage: string) => {
       if (!selectedCollectionSlug) {
@@ -354,9 +376,13 @@ export default function CollectionsManager() {
           throw new Error(errorData.error || "Failed to reorder collection items");
         }
 
-        const payload = await response.json();
-        const reorderedItems = payload.data as AdminCollectionItem[];
-        syncCollectionItems(selectedCollectionSlug, reorderedItems, preferredItemSlug);
+        await response.json();
+        await loadCollections({
+          preferredSlug: selectedCollectionSlug,
+          preferredItemSlug,
+          keepItemEditorOpen: itemEditorOpen,
+          preferredMobilePanel: "items",
+        });
         setSuccess(successMessage);
       } catch (reorderError) {
         setError(
@@ -370,7 +396,7 @@ export default function CollectionsManager() {
         setDesktopDropTargetSlug(null);
       }
     },
-    [authToken, getAuthHeaders, isLocalBypassEnabled, selectedCollectionSlug, syncCollectionItems]
+    [authToken, getAuthHeaders, isLocalBypassEnabled, itemEditorOpen, loadCollections, selectedCollectionSlug]
   );
 
   const moveItemByOffset = useCallback(
@@ -584,6 +610,7 @@ export default function CollectionsManager() {
     setSuccess(null);
 
     try {
+      const isEditingCollection = Boolean(selectedCollectionSlug);
       if (
         !collectionForm.name ||
         !collectionForm.slug ||
@@ -612,10 +639,9 @@ export default function CollectionsManager() {
 
       const payload = await response.json();
       const savedSlug = payload.data.slug as string;
-      setSelectedCollectionSlug(savedSlug);
       await loadCollections({ preferredSlug: savedSlug });
       setSuccess(
-        selectedCollectionSlug
+        isEditingCollection
           ? "Collection updated successfully."
           : "Collection created successfully.",
       );
@@ -664,7 +690,6 @@ export default function CollectionsManager() {
         throw new Error(errorData.error || "Failed to delete collection");
       }
 
-      startNewCollection();
       await loadCollections({ autoSelectFirst: true });
       setSuccess("Collection deleted successfully.");
     } catch (deleteError) {
@@ -695,6 +720,7 @@ export default function CollectionsManager() {
     setSuccess(null);
 
     try {
+      const isEditingItem = Boolean(selectedItemSlug);
       if (!itemForm.title || !itemForm.slug || !itemForm.date) {
         throw new Error("Please fill in all required item fields (title, slug, date)");
       }
@@ -722,12 +748,14 @@ export default function CollectionsManager() {
 
       const payload = await response.json();
       const savedItem = payload.data as AdminCollectionItem;
-      await loadCollections({ preferredSlug: collectionSlug });
-      setSelectedItemSlug(savedItem.slug);
-      setItemForm(savedItem);
-      setItemEditorOpen(true);
+      await loadCollections({
+        preferredSlug: collectionSlug,
+        preferredItemSlug: savedItem.slug,
+        keepItemEditorOpen: true,
+        preferredMobilePanel: "items",
+      });
       setSuccess(
-        selectedItemSlug ? "Item updated successfully." : "Item created successfully.",
+        isEditingItem ? "Item updated successfully." : "Item created successfully.",
       );
     } catch (submitError) {
       setError(
@@ -775,9 +803,11 @@ export default function CollectionsManager() {
         throw new Error(errorData.error || "Failed to delete item");
       }
 
-      await loadCollections({ preferredSlug: collectionSlug });
-      startNewItem();
+      await loadCollections({ preferredSlug: collectionSlug, preferredMobilePanel: "items" });
+      setSelectedItemSlug(null);
+      setItemForm(createEmptyItemForm(collectionSlug));
       setItemEditorOpen(false);
+      setMobilePanel("items");
       setSuccess("Item deleted successfully.");
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete item");

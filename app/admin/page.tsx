@@ -17,6 +17,11 @@ type AdminPost = {
   date?: string;
 };
 
+type LoadPostsResult = {
+  posts: AdminPost[];
+  selectedPost: AdminPost | null;
+};
+
 type AdminTabKey = 'dashboard' | 'create' | 'series' | 'collections' | 'images';
 type AdminLayoutMode = 'constrained' | 'wide';
 
@@ -43,12 +48,14 @@ export default function AdminPage() {
     [activeTab],
   );
 
-  const loadPosts = async () => {
+  const loadPosts = async ({
+    preferredSlug,
+  }: { preferredSlug?: string | null } = {}): Promise<LoadPostsResult> => {
     setPostsLoading(true);
     setPostsError(null);
 
     try {
-      const response = await fetch('/api/posts');
+      const response = await fetch('/api/posts', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to load posts');
       }
@@ -61,8 +68,23 @@ export default function AdminPage() {
       });
 
       setPosts(sortedPosts);
+      const selectedPost =
+        preferredSlug
+          ? sortedPosts.find((post) => post.slug === preferredSlug) ?? null
+          : null;
+
+      if (preferredSlug) {
+        setEditingPost(selectedPost);
+      }
+
+      return {
+        posts: sortedPosts,
+        selectedPost,
+      };
     } catch (error) {
-      setPostsError(error instanceof Error ? error.message : 'Failed to load posts');
+      const message = error instanceof Error ? error.message : 'Failed to load posts';
+      setPostsError(message);
+      throw new Error(message);
     } finally {
       setPostsLoading(false);
     }
@@ -76,7 +98,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      void loadPosts();
+      void loadPosts().catch(() => undefined);
     }
   }, [isAuthenticated]);
 
@@ -119,7 +141,7 @@ export default function AdminPage() {
                 New post
               </button>
               <button
-                onClick={() => void loadPosts()}
+                onClick={() => void loadPosts().catch(() => undefined)}
                 className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/35 bg-black/30 px-4 py-3 text-sm text-[var(--text-light)] transition hover:bg-black/45"
               >
                 Refresh posts
@@ -253,15 +275,21 @@ export default function AdminPage() {
               <PostEditor
                 mode={editingPost ? 'edit' : 'create'}
                 initialPost={editingPost}
-                onSuccess={() => {
-                  void loadPosts();
-                  setTimeout(() => {
+                onSuccess={async (savedSlug) => {
+                  const { selectedPost } = await loadPosts({ preferredSlug: savedSlug });
+
+                  if (!selectedPost) {
                     setEditingPost(null);
                     setActiveTab('dashboard');
-                  }, 1200);
+                    return null;
+                  }
+
+                  setEditingPost(selectedPost);
+                  setActiveTab('create');
+                  return selectedPost;
                 }}
-                onDelete={() => {
-                  void loadPosts();
+                onDelete={async () => {
+                  await loadPosts();
                   setEditingPost(null);
                   setActiveTab('dashboard');
                 }}

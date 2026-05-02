@@ -48,11 +48,11 @@ test('collections bootstrap selection is isolated from user-driven new state', a
   );
   assert.match(
     collectionsManager,
-    /if \(preferredSlug\) \{[\s\S]*selectCollection\(matchedCollection\);[\s\S]*return;\s*\}\s*\n\s*\n\s*if \(autoSelectFirst\) \{\s*selectCollection\(sortedCollections\[0\]\);/s,
+    /let matchedCollection: AdminCollection \| null = null;[\s\S]*if \(preferredSlug\) \{[\s\S]*matchedCollection =[\s\S]*sortedCollections\[0\];[\s\S]*\} else if \(autoSelectFirst\) \{\s*matchedCollection = sortedCollections\[0\];[\s\S]*if \(!matchedCollection\) \{[\s\S]*\}[\s\S]*selectCollection\(matchedCollection\);/s,
   );
   assert.match(
     collectionsManager,
-    /useEffect\(\(\) => \{\s*void loadCollections\(\{ autoSelectFirst: true \}\);\s*\}, \[loadCollections\]\);/,
+    /useEffect\(\(\) => \{\s*void loadCollections\(\{ autoSelectFirst: true \}\)\.catch\(\(\) => undefined\);\s*\}, \[loadCollections\]\);/,
   );
   assert.match(
     collectionsManager,

@@ -3,6 +3,7 @@ import { getStore } from '@netlify/blobs';
 import { getSharp, type SharpFactory } from '@/lib/sharpLoader';
 import { parseNumber, resolveImageMetadataWithSize } from '@/lib/imageMetadata';
 import { verifyAdminAuth } from '@/lib/serverAuth';
+import { adminMutableJsonResponse } from '@/lib/adminApi';
 
 const MAX_OUTPUT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2560;
@@ -231,7 +232,7 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({
+    return adminMutableJsonResponse({
       images: entries,
       optimizationAvailable,
       optimizationError,

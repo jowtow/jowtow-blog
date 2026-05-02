@@ -34,3 +34,21 @@
 - New mode now persists until explicit user selection/save
 - Validation passed; regression fixed
 - Collections redesign ready for re-review
+
+## Learnings
+
+<!-- 2026-05-02T17:36:50.506+00:00 -->
+- 2026-05-02T17:36:50.506+00:00: The `GET /api/series` route was missing `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` while all other admin GET routes (posts, collections, images) already had it — this was the last gap in the "always fresh" guarantee.
+- 2026-05-02T17:36:50.506+00:00: Two-layer approach for admin freshness: (1) server-side `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` on every admin GET route response prevents Netlify edge CDN caching; (2) client-side `cache: 'no-store'` on every GET fetch call prevents browser HTTP cache re-use. Both layers are now complete across all four admin data endpoints.
+- 2026-05-02T17:36:50.506+00:00: In Next.js 16 (used here), API routes are already dynamic by default (no `export const dynamic = 'force-dynamic'` needed) — confirmed by build output showing all `/api/*` routes marked `ƒ (Dynamic)`. The issue was purely HTTP-layer caching (CDN + browser), not Next.js Full Route Cache.
+
+## Team Session Update
+
+**2026-05-02T17:36:50.506+00:00: Admin Stale Data Fix**
+
+- User reported saved posts/series/collections/images not appearing after saves or refreshes
+- Root cause: `GET /api/series` was missing `Cache-Control: no-store` — Netlify CDN could cache the response
+- Fix: Added `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` to `/api/series` GET response (and confirmed `/api/images` was similarly completed)
+- All four admin GET routes now have consistent no-cache headers
+- All four client-side GET fetch calls already had `cache: 'no-store'`
+- Build passes; all 11 tests pass
