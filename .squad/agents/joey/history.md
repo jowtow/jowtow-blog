@@ -9,6 +9,9 @@
 ## Learnings
 
 <!-- Append learnings below -->
+- 2026-05-02T17:49:54.951+00:00: For admin freshness regressions, the safest source-contract gate is a three-part contract: admin loaders must fetch with `cache: 'no-store'`, every mutable admin GET route must emit `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`, and mutation success paths must await their authoritative reload before showing success or navigating away.
+- 2026-05-02T17:36:50.506+00:00: Admin data freshness issues traced to 5 failure modes: (1) save succeeds but UI doesn't update (onSuccess callback chain broken), (2) refresh hits stale cache (no cache-busting headers), (3) concurrent saves race (no deduplication), (4) manual refresh doesn't bypass cache (default fetch caching), (5) component unmounts before async refresh completes (no AbortController). Most critical: PostEditor/CollectionsManager/SeriesManager don't await loadPosts/loadCollections/loadSeries after save, and all load functions lack `cache: 'no-store'`.
+- 2026-05-02T17:36:50.506+00:00: Created comprehensive test strategy (`tests/adminDataFreshness.test.ts`) with 10 source-contract tests covering save→refresh flow, cache invalidation, concurrent save safety, manual refresh accuracy, and component lifecycle safeguards. Strategy document in `.squad/decisions/inbox/joey-admin-data-freshness-test-strategy.md`.
 - 2026-05-02T16:04:37.513+00:00: The landed collection-card clipping fix is safe when `components/CollectionsManager/CollectionsManager.tsx` keeps `min-w-0 overflow-hidden` on each mobile card, truncates the markdown summary before the action row, and leaves the desktop `md:block` table wrapper plus `min-w-[720px]` grid unchanged.
 - 2026-05-02T16:04:37.513+00:00: The mobile item cards in `components/CollectionsManager/CollectionsManager.tsx` need the preview copy clamped (`line-clamp-2` + word breaking) while keeping the two-button action grid intact, otherwise long summaries can visually crowd or clip the mobile action row even though the desktop table contract stays unchanged.
 - 2026-05-02T15:41:30.668+00:00: For `components/CollectionsManager/CollectionsManager.tsx`, the safest reviewer gate for the item-workspace scroll fix is a source-contract pairing: keep the mobile item cards behind `md:hidden`, and keep the dense table’s `overflow-x-auto` + `min-w-[720px]` wrapper desktop-only so mobile pages do not regain horizontal overflow while desktop density survives.
@@ -18,6 +21,22 @@
 - 2026-05-02T14:47:34.150+00:00: `tests/adminMobileContracts.test.ts` uses source-contract checks because the repo’s test surface is `node:test` via `tsx --test` without a DOM harness; it now guards the md+ admin shell lock, mobile tab-strip affordances, and the Collections bootstrap auto-select fix.
 - 2026-05-02T14:47:34.150+00:00: The mobile admin refactor keeps desktop workflows by swapping to mobile-only panel toggles/cards in `SeriesManager`, `CollectionsManager`, and `ImagesManager`, while retaining lg/xl multi-pane or dense-table layouts at larger breakpoints.
 - 2026-05-02T14:47:34.150+00:00: Repo-level confidence for admin UI reviews comes from `npm test`, `npm run lint`, and `npm run build`; the current mobile admin pass clears all three, with build-time blob warnings remaining non-blocking environment noise.
+
+## Admin Freshness Pass — 2026-05-02T17:49:54.951Z
+
+**Orchestration complete:** Cook (backend), Ambrose (frontend), Joey (tester) synchronized on admin data freshness regression suite.
+
+**Joey's scope:**
+- Locked three-part admin freshness contract in source tests: loaders use `cache: 'no-store'`, mutable GET routes emit no-store headers, mutation success flows await authoritative reload
+- Test suite covers posts, collections, series, images
+- Source-contract approach (no browser harness needed) ensures regression prevention
+- Future admin refactors cannot silently reintroduce "saved but still stale" behavior
+
+**Cook's backend work:** All mutable admin JSON GET routes return `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`, centralized via helper to prevent drift
+
+**Ambrose's frontend work:** All admin loaders use `cache: 'no-store'`, mutation success awaits fresh reload, editors preserve selection from refreshed data
+
+**Impact:** Eliminated three-layer cache staleness issue. Admin UI now always shows authoritative server data immediately after save.
 
 ## Team Session Update
 

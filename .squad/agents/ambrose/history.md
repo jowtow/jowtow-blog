@@ -9,6 +9,7 @@
 ## Learnings
 
 <!-- Append learnings below -->
+- 2026-05-02T17:36:50.506+00:00: Admin data freshness ensures saved posts/collections/items always appear immediately. Added `cache: 'no-store'` to all admin fetch calls (PostEditor, Collections, Series, Images managers) and server-side `Cache-Control` headers on GET endpoints. This prevents browser/Next.js cache from returning stale data after saves. Updated `app/admin/page.tsx:51`, `components/CollectionsManager/CollectionsManager.tsx:182`, `components/SeriesManager/SeriesManager.tsx:189`, `components/ImagesManager/ImagesManager.tsx:151`, and all admin API GET routes (`/api/posts`, `/api/collections`, `/api/series`, `/api/images`).
 - 2026-05-02T16:04:37.513+00:00: Collections mobile item cards stay safe inside the overflow-hidden item workspace when each card gets `min-w-0 overflow-hidden` and the summary preview uses `truncate`, preventing long copy from clipping the Select/Open Editor actions.
 - 2026-05-02T15:41:30.668+00:00: The Collections item workspace header now uses `w-full min-w-0 overflow-hidden` plus a mobile-stacked control group, keeping phones free of horizontal scroll while restoring the dense side-by-side header from `md+`.
 - 2026-05-02T14:47:34.150+00:00: Mobile admin scroll ownership now lives in the page flow below `md`, while `components/RouteAwareMain/RouteAwareMain.tsx`, `app/admin/layout.tsx`, and `app/admin/page.tsx` keep the viewport-locked shell only on desktop.
@@ -19,6 +20,17 @@
 - 2026-05-02T11:41:01.641+00:00: `app/admin/page.tsx` now assigns per-tab shell modes so Dashboard/Create stay constrained while Collections/Series/Images render in the wider workspace shell; `components/ImagesManager/ImagesManager.tsx` now fills that shell cleanly.
 
 ## Team Session Update
+
+**2026-05-02T17:36:50.506+00:00: Admin Data Freshness Fix**
+
+- Identified cache issue: admin components weren't forcing fresh fetches after saves, causing UI to show stale data
+- Problem: Plain `fetch()` calls without cache-busting options hit browser/Next.js cache after save operations
+- Solution: Added `cache: 'no-store'` to all admin data-fetch calls + server-side `Cache-Control` headers
+- Frontend: Updated 4 admin managers (PostEditor, Collections, Series, Images) to bypass cache on GET requests
+- Backend: Added `'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'` headers to all admin API GET responses
+- Result: Saved posts/collections/items now always display with latest data from server immediately after save
+- Validation: `npm lint`, `npm test` (11/11 passing), `npm run build` all successful
+- Ready for deployment; ensures John always sees up-to-date content after saves.
 
 **2026-05-02T16:04:37.513+00:00: Collections Mobile Item Card Truncation**
 
@@ -58,3 +70,20 @@
 - Auto-select-first collection, dense item browser, split markdown editor all verified
 - Validation passed; no issues blocking deployment
 - Stu approved architecture; ready for next iteration
+- 2026-05-02T17:49:54.951+00:00: Admin mutations now wait for an authoritative server reload before success UI appears. Posts stay on the refreshed saved post in `app/admin/page.tsx`/`components/PostEditor/PostEditor.tsx`, collection and series editors reselect the saved item/post after reload, and image bulk actions keep surviving selections instead of clearing them optimistically.
+
+## Admin Freshness Pass — 2026-05-02T17:49:54.951Z
+
+**Orchestration complete:** Cook (backend), Ambrose (frontend), Joey (tester) synchronized on admin data freshness fix.
+
+**Ambrose's scope:**
+- All admin load functions (`loadPosts`, `loadCollections`, `loadSeries`, `loadImages`) now use `cache: 'no-store'` 
+- Mutation success flows await fresh server read before showing success messaging
+- Editors preserve intended saved selection from refreshed dataset instead of trusting stale local state
+- Affected files: `app/admin/page.tsx`, `components/PostEditor/PostEditor.tsx`, `components/CollectionsManager/CollectionsManager.tsx`, `components/SeriesManager/SeriesManager.tsx`, `components/ImagesManager/ImagesManager.tsx`
+
+**Cook handled server-side:** Backend now returns `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` headers from all mutable admin JSON GET routes
+
+**Joey locked regression:** Three-part admin freshness contract now tested: loaders use `cache: 'no-store'`, mutable GET routes emit no-store headers, mutation success flows await fresh reload
+
+**Impact:** Saved posts/collections/items now always display with latest server data immediately. Eliminated stale-data behavior that frustrated users.
