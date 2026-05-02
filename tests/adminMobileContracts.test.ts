@@ -120,4 +120,12 @@ test('collections item workspace keeps mobile cards and desktop-only horizontal 
     collectionsManager,
     /aria-label=\{`Move \$\{item\.title\} earlier`\}[\s\S]*aria-label=\{`Move \$\{item\.title\} later`\}/s,
   );
+  assert.match(
+    collectionsManager,
+    /Drag rows to reorder or double-click a row to edit\./,
+  );
+  assert.match(
+    collectionsManager,
+    /draggable=\{!Boolean\(itemReorderingSlug\)\}[\s\S]*onDragStart=\{\(event\) => \{[\s\S]*event\.dataTransfer\.effectAllowed = "move";[\s\S]*onDrop=\{\(event\) => \{/s,
+  );
 });

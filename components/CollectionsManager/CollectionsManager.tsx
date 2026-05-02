@@ -89,6 +89,8 @@ export default function CollectionsManager() {
   const [itemSubmitting, setItemSubmitting] = useState(false);
   const [itemDeleting, setItemDeleting] = useState(false);
   const [itemReorderingSlug, setItemReorderingSlug] = useState<string | null>(null);
+  const [desktopDraggedItemSlug, setDesktopDraggedItemSlug] = useState<string | null>(null);
+  const [desktopDropTargetSlug, setDesktopDropTargetSlug] = useState<string | null>(null);
   const [itemEditorOpen, setItemEditorOpen] = useState(false);
   const [itemEditorSurface, setItemEditorSurface] = useState<ItemEditorSurface>("edit");
   const [mobilePanel, setMobilePanel] = useState<CollectionsMobilePanel>("collections");
@@ -316,9 +318,9 @@ export default function CollectionsManager() {
     [selectedCollectionSlug, selectedItemSlug]
   );
 
-  const moveItemByOffset = useCallback(
-    async (itemSlug: string, offset: -1 | 1) => {
-      if (!selectedCollectionSlug || !currentCollection) {
+  const persistItemOrder = useCallback(
+    async (nextItems: AdminCollectionItem[], preferredItemSlug: string, successMessage: string) => {
+      if (!selectedCollectionSlug) {
         setError("Select a collection before reordering items.");
         return;
       }
@@ -328,22 +330,7 @@ export default function CollectionsManager() {
         return;
       }
 
-      const currentIndex = currentCollection.items.findIndex((item) => item.slug === itemSlug);
-      if (currentIndex === -1) {
-        setError("Could not find the selected item to reorder.");
-        return;
-      }
-
-      const nextIndex = currentIndex + offset;
-      if (nextIndex < 0 || nextIndex >= currentCollection.items.length) {
-        return;
-      }
-
-      const nextItems = currentCollection.items.slice();
-      const [movedItem] = nextItems.splice(currentIndex, 1);
-      nextItems.splice(nextIndex, 0, movedItem);
-
-      setItemReorderingSlug(itemSlug);
+      setItemReorderingSlug(preferredItemSlug);
       setError(null);
       setSuccess(null);
 
@@ -369,12 +356,8 @@ export default function CollectionsManager() {
 
         const payload = await response.json();
         const reorderedItems = payload.data as AdminCollectionItem[];
-        syncCollectionItems(selectedCollectionSlug, reorderedItems, itemSlug);
-        setSuccess(
-          offset < 0
-            ? `Moved "${movedItem.title}" earlier in the collection.`
-            : `Moved "${movedItem.title}" later in the collection.`
-        );
+        syncCollectionItems(selectedCollectionSlug, reorderedItems, preferredItemSlug);
+        setSuccess(successMessage);
       } catch (reorderError) {
         setError(
           reorderError instanceof Error
@@ -383,9 +366,75 @@ export default function CollectionsManager() {
         );
       } finally {
         setItemReorderingSlug(null);
+        setDesktopDraggedItemSlug(null);
+        setDesktopDropTargetSlug(null);
       }
     },
-    [authToken, currentCollection, getAuthHeaders, isLocalBypassEnabled, selectedCollectionSlug, syncCollectionItems]
+    [authToken, getAuthHeaders, isLocalBypassEnabled, selectedCollectionSlug, syncCollectionItems]
+  );
+
+  const moveItemByOffset = useCallback(
+    async (itemSlug: string, offset: -1 | 1) => {
+      if (!currentCollection) {
+        setError("Select a collection before reordering items.");
+        return;
+      }
+
+      const currentIndex = currentCollection.items.findIndex((item) => item.slug === itemSlug);
+      if (currentIndex === -1) {
+        setError("Could not find the selected item to reorder.");
+        return;
+      }
+
+      const nextIndex = currentIndex + offset;
+      if (nextIndex < 0 || nextIndex >= currentCollection.items.length) {
+        return;
+      }
+
+      const nextItems = currentCollection.items.slice();
+      const [movedItem] = nextItems.splice(currentIndex, 1);
+      nextItems.splice(nextIndex, 0, movedItem);
+
+      await persistItemOrder(
+        nextItems,
+        itemSlug,
+        offset < 0
+          ? `Moved "${movedItem.title}" earlier in the collection.`
+          : `Moved "${movedItem.title}" later in the collection.`
+      );
+    },
+    [currentCollection, persistItemOrder]
+  );
+
+  const handleDesktopDrop = useCallback(
+    async (targetItemSlug: string) => {
+      if (!currentCollection || !desktopDraggedItemSlug || desktopDraggedItemSlug === targetItemSlug) {
+        setDesktopDraggedItemSlug(null);
+        setDesktopDropTargetSlug(null);
+        return;
+      }
+
+      const nextItems = currentCollection.items.slice();
+      const draggedIndex = nextItems.findIndex((item) => item.slug === desktopDraggedItemSlug);
+      const targetIndex = nextItems.findIndex((item) => item.slug === targetItemSlug);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        setDesktopDraggedItemSlug(null);
+        setDesktopDropTargetSlug(null);
+        setError("Could not complete the drag and drop reorder.");
+        return;
+      }
+
+      const [movedItem] = nextItems.splice(draggedIndex, 1);
+      nextItems.splice(targetIndex, 0, movedItem);
+
+      await persistItemOrder(
+        nextItems,
+        movedItem.slug,
+        `Dropped "${movedItem.title}" into a new position.`
+      );
+    },
+    [currentCollection, desktopDraggedItemSlug, persistItemOrder]
   );
 
   const startNewItem = useCallback(() => {
@@ -1033,7 +1082,7 @@ export default function CollectionsManager() {
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">Item Workspace</h3>
               <p className="mt-1 text-sm text-[var(--text-light)]/60">
                 {selectedCollectionSlug
-                  ? `Dense browser for /${selectedCollectionSlug}. Double-click a row to edit.`
+                  ? `Dense browser for /${selectedCollectionSlug}. Drag rows to reorder or double-click a row to edit.`
                   : "Select or create a collection to unlock item editing."}
               </p>
             </div>
@@ -1165,6 +1214,9 @@ export default function CollectionsManager() {
                   <div className="divide-y divide-[var(--color-secondary)]/12">
                     {sortedItems.map((item, index) => {
                       const isActive = item.slug === selectedItemSlug;
+                      const isDragging = item.slug === desktopDraggedItemSlug;
+                      const isDropTarget =
+                        item.slug === desktopDropTargetSlug && desktopDraggedItemSlug !== item.slug;
                       const hasMarkdown = item.markdown.trim().length > 0;
 
                       return (
@@ -1178,16 +1230,57 @@ export default function CollectionsManager() {
                               selectItem(item);
                             }
                           }}
+                          draggable={!Boolean(itemReorderingSlug)}
+                          onDragStart={(event) => {
+                            if (Boolean(itemReorderingSlug)) {
+                              event.preventDefault();
+                              return;
+                            }
+
+                            setDesktopDraggedItemSlug(item.slug);
+                            setDesktopDropTargetSlug(item.slug);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", item.slug);
+                          }}
+                          onDragEnd={() => {
+                            setDesktopDraggedItemSlug(null);
+                            setDesktopDropTargetSlug(null);
+                          }}
+                          onDragOver={(event) => {
+                            if (!desktopDraggedItemSlug || desktopDraggedItemSlug === item.slug) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            setDesktopDropTargetSlug(item.slug);
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void handleDesktopDrop(item.slug);
+                          }}
                           role="button"
                           tabIndex={0}
                           className={`grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 px-5 py-3 text-left transition ${
                             isActive
                               ? "bg-[var(--color-primary)]/10"
                               : "hover:bg-white/4"
+                          } ${
+                            isDragging
+                              ? "cursor-grabbing opacity-50"
+                              : "cursor-grab"
+                          } ${
+                            isDropTarget
+                              ? "border-y border-[var(--color-primary)]/55 bg-[var(--color-primary)]/6"
+                              : ""
                           }`}
                           title="Double-click to open the fullscreen editor"
                         >
                           <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-12 w-6 shrink-0 items-center justify-center text-xs tracking-[0.2em] text-[var(--text-light)]/35">
+                              <span aria-hidden="true">::</span>
+                            </div>
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--color-secondary)]/20 bg-black/25">
                               {item.image ? (
                                 <img
