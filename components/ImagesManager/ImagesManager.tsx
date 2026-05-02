@@ -366,7 +366,7 @@ export default function ImagesManager() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 text-[var(--text-light)]">
+    <div className="w-full py-8 text-[var(--text-light)]">
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">
           Blob Image Library

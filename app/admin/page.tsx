@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore, logoutFromNetlify } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import PostEditor from '@/components/PostEditor/PostEditor';
@@ -17,16 +17,30 @@ type AdminPost = {
   date?: string;
 };
 
+type AdminTabKey = 'dashboard' | 'create' | 'series' | 'collections' | 'images';
+type AdminLayoutMode = 'constrained' | 'wide';
+
+const tabs: Array<{ key: AdminTabKey; label: string; mode: AdminLayoutMode }> = [
+  { key: 'dashboard', label: 'Dashboard', mode: 'constrained' },
+  { key: 'create', label: 'Create', mode: 'constrained' },
+  { key: 'series', label: 'Series', mode: 'wide' },
+  { key: 'collections', label: 'Collections', mode: 'wide' },
+  { key: 'images', label: 'Images', mode: 'wide' },
+];
+
 export default function AdminPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'create' | 'series' | 'collections' | 'images'
-  >('dashboard');
+  const [activeTab, setActiveTab] = useState<AdminTabKey>('dashboard');
   const [posts, setPosts] = useState<AdminPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<AdminPost | null>(null);
+
+  const activeTabConfig = useMemo(
+    () => tabs.find((tab) => tab.key === activeTab) ?? tabs[0],
+    [activeTab],
+  );
 
   const loadPosts = async () => {
     setPostsLoading(true);
@@ -66,7 +80,7 @@ export default function AdminPage() {
   }, [isAuthenticated]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -76,7 +90,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[var(--color-dark)] text-[var(--text-light)]">
       <nav className="border-b border-[var(--color-secondary)]/30 bg-[var(--color-dark)]/95 backdrop-blur">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center gap-4">
+        <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4 px-4 py-4 lg:px-6">
           <div>
             <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-secondary)]/80">Control Panel</p>
             <h1 className="text-2xl font-semibold text-[var(--color-primary)]">Admin</h1>
@@ -86,82 +100,56 @@ export default function AdminPage() {
               await logoutFromNetlify();
               router.push('/');
             }}
-            className="border border-red-400/50 bg-red-500/20 hover:bg-red-500/35 text-red-200 font-semibold py-2 px-4 rounded-md cursor-pointer transition-colors"
+            className="cursor-pointer rounded-md border border-red-400/50 bg-red-500/20 px-4 py-2 font-semibold text-red-200 transition-colors hover:bg-red-500/35"
           >
             Logout
           </button>
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 shadow-[0_20px_70px_rgba(0,0,0,0.35)] mb-6 overflow-hidden">
-          <div className="flex border-b border-[var(--color-secondary)]/25 bg-black/30">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
-                activeTab === 'dashboard'
-                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
-                activeTab === 'create'
-                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
-              }`}
-            >
-              {editingPost ? 'Edit Post' : 'Create Post'}
-            </button>
-            <button
-              onClick={() => setActiveTab('series')}
-              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
-                activeTab === 'series'
-                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
-              }`}
-            >
-              Series
-            </button>
-            <button
-              onClick={() => setActiveTab('collections')}
-              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
-                activeTab === 'collections'
-                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
-              }`}
-            >
-              Collections
-            </button>
-            <button
-              onClick={() => setActiveTab('images')}
-              className={`flex-1 px-4 py-3 font-medium text-left transition-colors ${
-                activeTab === 'images'
-                  ? 'border-b-2 border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'text-[var(--text-light)]/70 hover:text-[var(--text-light)] hover:bg-white/5'
-              }`}
-            >
-              Images
-            </button>
+      <div className="mx-auto w-full max-w-[1680px] px-4 py-6 lg:px-6 lg:py-8">
+        <div className="overflow-hidden rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
+          <div className="border-b border-[var(--color-secondary)]/25 bg-black/30 px-3 py-3 lg:px-4">
+            <div className="flex flex-wrap gap-2">
+              {tabs.map((tab) => {
+                const isActive = tab.key === activeTab;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`min-w-[120px] rounded-lg px-4 py-3 text-left font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/50'
+                        : 'text-[var(--text-light)]/70 hover:bg-white/5 hover:text-[var(--text-light)]'
+                    }`}
+                  >
+                    {tab.key === 'create' && editingPost ? 'Edit Post' : tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="p-6">
+          <div
+            className={
+              activeTabConfig.mode === 'wide'
+                ? 'w-full px-4 py-4 lg:px-5 lg:py-5'
+                : 'mx-auto w-full max-w-6xl px-4 py-6'
+            }
+          >
             {activeTab === 'dashboard' && (
               <div>
-                <h2 className="text-xl font-semibold mb-4 text-[var(--color-primary)]">Admin Dashboard</h2>
+                <h2 className="mb-4 text-xl font-semibold text-[var(--color-primary)]">Admin Dashboard</h2>
 
-                <div className="mb-6 p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/35 rounded-md">
+                <div className="mb-6 rounded-md border border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 p-4">
                   <p className="text-[var(--color-primary)]">
                     <strong>Welcome!</strong> You are logged in successfully.
                   </p>
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2 text-[var(--color-secondary)]">User Information</h3>
-                  <div className="bg-black/20 border border-[var(--color-secondary)]/25 p-4 rounded-md">
+                  <h3 className="mb-2 text-lg font-semibold text-[var(--color-secondary)]">User Information</h3>
+                  <div className="rounded-md border border-[var(--color-secondary)]/25 bg-black/20 p-4">
                     <p className="mb-2">
                       <strong>Email:</strong> {user?.email}
                     </p>
@@ -174,38 +162,38 @@ export default function AdminPage() {
                 </div>
 
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2 text-[var(--color-secondary)]">Quick Actions</h3>
+                  <h3 className="mb-2 text-lg font-semibold text-[var(--color-secondary)]">Quick Actions</h3>
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => {
                         setEditingPost(null);
                         setActiveTab('create');
                       }}
-                      className="px-4 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] hover:brightness-95 font-semibold rounded-md cursor-pointer transition"
+                      className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
                     >
                       Create New Post
                     </button>
                     <button
                       onClick={() => loadPosts()}
-                      className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
                     >
                       Refresh Posts
                     </button>
                     <button
                       onClick={() => setActiveTab('series')}
-                      className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
                     >
                       Manage Series
                     </button>
                     <button
                       onClick={() => setActiveTab('collections')}
-                      className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
                     >
                       Manage Collections
                     </button>
                     <button
                       onClick={() => setActiveTab('images')}
-                      className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
                     >
                       Manage Images
                     </button>
@@ -213,7 +201,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="mb-3 flex items-center justify-between gap-4">
                     <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Manage Existing Posts</h3>
                     <span className="text-sm text-[var(--text-light)]/60">Dynamic admin posts only</span>
                   </div>
@@ -237,7 +225,7 @@ export default function AdminPage() {
                       {posts.map((post) => (
                         <div
                           key={post.slug}
-                          className="rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                          className="flex flex-col gap-4 rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 px-4 py-4 md:flex-row md:items-center md:justify-between"
                         >
                           <div>
                             <p className="text-lg font-semibold text-[var(--color-primary)]">{post.title}</p>
@@ -253,13 +241,13 @@ export default function AdminPage() {
                                 setEditingPost(post);
                                 setActiveTab('create');
                               }}
-                              className="px-4 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] hover:brightness-95 font-semibold rounded-md cursor-pointer transition"
+                              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => window.open(`/post/${post.slug}`, '_blank', 'noopener,noreferrer')}
-                              className="px-4 py-2 border border-[var(--color-secondary)]/45 bg-black/25 hover:bg-black/40 text-[var(--text-light)] rounded-md cursor-pointer transition"
+                              className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
                             >
                               View
                             </button>
