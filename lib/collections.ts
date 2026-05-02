@@ -14,6 +14,7 @@ export type CollectionItemData = {
   title: string;
   image: string;
   date: string;
+  order: number;
 };
 
 export type CollectionItem = {
@@ -45,6 +46,7 @@ export async function getCollections(): Promise<Collection[]> {
           title: item.title,
           image: item.image,
           date: item.date,
+          order: item.order ?? 0,
         },
         markdown: item.markdown,
         slug: item.slug,
@@ -78,6 +80,7 @@ export async function getCollectionBySlug(slug: string): Promise<Collection> {
           title: item.title,
           image: item.image,
           date: item.date,
+          order: item.order ?? 0,
         },
         markdown: item.markdown,
         slug: item.slug,

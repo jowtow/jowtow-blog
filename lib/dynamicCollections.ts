@@ -18,6 +18,7 @@ const collectionItemSchema = z.object({
   markdown: z.string(),
   image: z.string(),
   date: z.string(),
+  order: z.number().int().nonnegative().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -26,9 +27,75 @@ export type DynamicCollectionMetadata = z.infer<typeof collectionMetadataSchema>
 export type DynamicCollectionItem = z.infer<typeof collectionItemSchema>;
 
 const COLLECTION_STORE_NAME = 'collections';
+const MAX_ITEM_ORDER = Number.MAX_SAFE_INTEGER;
 
 function getCollectionStore() {
   return getStore(COLLECTION_STORE_NAME);
+}
+
+function compareLegacyCollectionItems(left: DynamicCollectionItem, right: DynamicCollectionItem) {
+  const leftDate = Date.parse(left.date);
+  const rightDate = Date.parse(right.date);
+
+  if (!Number.isNaN(leftDate) || !Number.isNaN(rightDate)) {
+    if (Number.isNaN(leftDate)) {
+      return 1;
+    }
+
+    if (Number.isNaN(rightDate)) {
+      return -1;
+    }
+
+    if (leftDate !== rightDate) {
+      return rightDate - leftDate;
+    }
+  }
+
+  const leftCreatedAt = left.createdAt ? Date.parse(left.createdAt) : Number.NaN;
+  const rightCreatedAt = right.createdAt ? Date.parse(right.createdAt) : Number.NaN;
+
+  if (!Number.isNaN(leftCreatedAt) || !Number.isNaN(rightCreatedAt)) {
+    if (Number.isNaN(leftCreatedAt)) {
+      return 1;
+    }
+
+    if (Number.isNaN(rightCreatedAt)) {
+      return -1;
+    }
+
+    if (leftCreatedAt !== rightCreatedAt) {
+      return rightCreatedAt - leftCreatedAt;
+    }
+  }
+
+  return left.slug.localeCompare(right.slug);
+}
+
+export function normalizeDynamicCollectionItems(items: DynamicCollectionItem[]) {
+  const fallbackOrder = new Map(
+    items
+      .filter((item) => item.order === undefined)
+      .slice()
+      .sort(compareLegacyCollectionItems)
+      .map((item, index) => [item.slug, index])
+  );
+
+  return items
+    .slice()
+    .sort((left, right) => {
+      const leftOrder = left.order ?? fallbackOrder.get(left.slug) ?? MAX_ITEM_ORDER;
+      const rightOrder = right.order ?? fallbackOrder.get(right.slug) ?? MAX_ITEM_ORDER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return compareLegacyCollectionItems(left, right);
+    })
+    .map((item, index) => ({
+      ...item,
+      order: index,
+    }));
 }
 
 export function getCollectionMetadataKey(slug: string) {
@@ -73,7 +140,7 @@ export async function listDynamicCollections() {
 
       return {
         metadata,
-        items: items.filter(Boolean) as DynamicCollectionItem[],
+        items: normalizeDynamicCollectionItems(items.filter(Boolean) as DynamicCollectionItem[]),
       };
     })
   );

@@ -20,15 +20,13 @@ export default async function CollectionPage({
 }) {
   const collection = await getCollectionBySlug((await params).slug);
 
-  const carouselItems = collection.items
-    .sort((a, b) => (a.data.date < b.data.date ? 1 : -1))
-    .map((item) => ({
-      title: item.data.title,
-      image: item.data.image,
-      markdown: item.markdown,
-      slug: item.slug,
-      date: item.data.date,
-    }));
+  const carouselItems = collection.items.map((item) => ({
+    title: item.data.title,
+    image: item.data.image,
+    markdown: item.markdown,
+    slug: item.slug,
+    date: item.data.date,
+  }));
 
   return (
     <>

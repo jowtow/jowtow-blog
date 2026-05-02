@@ -137,9 +137,10 @@ export default function ImagesManager() {
 
   const loadImages = useCallback(async () => {
     if (!authToken && !isLocalBypassEnabled) {
-      setError("Authentication token not available. Please refresh the page.");
+      const message = "Authentication token not available. Please refresh the page.";
+      setError(message);
       setLoading(false);
-      return;
+      throw new Error(message);
     }
 
     setLoading(true);
@@ -148,6 +149,7 @@ export default function ImagesManager() {
     try {
       const response = await fetch("/api/images", {
         headers: getAuthHeaders(),
+        cache: 'no-store',
       });
 
       if (!response.ok) {
@@ -191,14 +193,17 @@ export default function ImagesManager() {
         return next;
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load images");
+      const message =
+        loadError instanceof Error ? loadError.message : "Failed to load images";
+      setError(message);
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
   }, [authToken, isLocalBypassEnabled]);
 
   useEffect(() => {
-    void loadImages();
+    void loadImages().catch(() => undefined);
   }, [loadImages]);
 
   const storageSummary = useMemo(() => {
@@ -293,14 +298,12 @@ export default function ImagesManager() {
       };
 
       const saved = formatBytes(data.summary.savedBytes);
+      await loadImages();
       setSuccess(
         `Optimized ${data.summary.optimizedCount} image(s). ` +
           `Skipped ${data.summary.skippedCount}. ` +
           `Saved ${saved}.`,
       );
-
-      setSelectedKeys(new Set());
-      await loadImages();
     } catch (optimizeError) {
       setError(
         optimizeError instanceof Error
@@ -355,13 +358,11 @@ export default function ImagesManager() {
         summary: DeleteSummary;
       };
 
+      await loadImages();
       setSuccess(
         `Deleted ${data.summary.deletedCount} image(s). ` +
           `Errors: ${data.summary.errorCount}.`,
       );
-
-      setSelectedKeys(new Set());
-      await loadImages();
     } catch (deleteError) {
       setError(
         deleteError instanceof Error ? deleteError.message : "Failed to delete images",
@@ -437,7 +438,7 @@ export default function ImagesManager() {
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <button
-                onClick={() => void loadImages()}
+                onClick={() => void loadImages().catch(() => undefined)}
                 className="rounded-xl border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-3 text-[var(--text-light)] transition hover:bg-black/40 disabled:opacity-50"
                 disabled={loading || optimizing || deleting}
               >

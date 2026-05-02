@@ -8,6 +8,7 @@ import {
 } from '@/lib/dynamicSeries';
 import { getStore } from '@netlify/blobs';
 import { verifyAdminAuth } from '@/lib/serverAuth';
+import { adminMutableJsonResponse } from '@/lib/adminApi';
 
 function revalidateSeriesPaths(slugs: string[]) {
   revalidatePath('/');
@@ -21,7 +22,7 @@ function revalidateSeriesPaths(slugs: string[]) {
 export async function GET() {
   try {
     const series = await listDynamicSeries();
-    return NextResponse.json(series);
+    return adminMutableJsonResponse(series);
   } catch (error) {
     console.error('Error fetching series:', error);
     return NextResponse.json({ error: 'Failed to fetch series' }, { status: 500 });

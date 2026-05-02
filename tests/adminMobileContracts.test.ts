@@ -48,11 +48,11 @@ test('collections bootstrap selection is isolated from user-driven new state', a
   );
   assert.match(
     collectionsManager,
-    /if \(preferredSlug\) \{[\s\S]*selectCollection\(matchedCollection\);[\s\S]*return;\s*\}\s*\n\s*\n\s*if \(autoSelectFirst\) \{\s*selectCollection\(sortedCollections\[0\]\);/s,
+    /let matchedCollection: AdminCollection \| null = null;[\s\S]*if \(preferredSlug\) \{[\s\S]*matchedCollection =[\s\S]*sortedCollections\[0\];[\s\S]*\} else if \(autoSelectFirst\) \{\s*matchedCollection = sortedCollections\[0\];[\s\S]*if \(!matchedCollection\) \{[\s\S]*\}[\s\S]*selectCollection\(matchedCollection\);/s,
   );
   assert.match(
     collectionsManager,
-    /useEffect\(\(\) => \{\s*void loadCollections\(\{ autoSelectFirst: true \}\);\s*\}, \[loadCollections\]\);/,
+    /useEffect\(\(\) => \{\s*void loadCollections\(\{ autoSelectFirst: true \}\)\.catch\(\(\) => undefined\);\s*\}, \[loadCollections\]\);/,
   );
   assert.match(
     collectionsManager,
@@ -106,6 +106,26 @@ test('collections item workspace keeps mobile cards and desktop-only horizontal 
   );
   assert.match(
     collectionsManager,
+    /<div className="mt-2 grid grid-cols-2 gap-2">[\s\S]*Move Earlier[\s\S]*Move Later/s,
+  );
+  assert.match(
+    collectionsManager,
+    /\/api\/collections\/\$\{encodeURIComponent\(selectedCollectionSlug\)\}\/items\/reorder/,
+  );
+  assert.match(
+    collectionsManager,
     /<div className="hidden overflow-x-auto md:block">[\s\S]*<div className="min-w-\[720px\]">[\s\S]*grid-cols-\[minmax\(0,2\.1fr\)_150px_120px_120px\][\s\S]*onDoubleClick=\{\(\) => openItemEditor\(item\)\}/s,
+  );
+  assert.match(
+    collectionsManager,
+    /aria-label=\{`Move \$\{item\.title\} earlier`\}[\s\S]*aria-label=\{`Move \$\{item\.title\} later`\}/s,
+  );
+  assert.match(
+    collectionsManager,
+    /Drag rows to reorder or double-click a row to edit\./,
+  );
+  assert.match(
+    collectionsManager,
+    /draggable=\{!Boolean\(itemReorderingSlug\)\}[\s\S]*onDragStart=\{\(event\) => \{[\s\S]*event\.dataTransfer\.effectAllowed = "move";[\s\S]*onDrop=\{\(event\) => \{/s,
   );
 });

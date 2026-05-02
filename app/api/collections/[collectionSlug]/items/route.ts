@@ -64,6 +64,7 @@ export async function POST(
       markdown: markdown || '',
       image: image || '',
       date,
+      order: collection.items.length,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -75,6 +76,7 @@ export async function POST(
         collectionSlug,
         date,
         title,
+        order: itemData.order,
       },
     });
 
@@ -156,6 +158,7 @@ export async function PUT(
         collectionSlug,
         date,
         title,
+        order: itemData.order,
       },
     });
 

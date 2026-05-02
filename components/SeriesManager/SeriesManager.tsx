@@ -31,6 +31,14 @@ type AdminSeries = {
 type SeriesMobilePanel = "series" | "details" | "posts";
 type SeriesPostsMobileView = "list" | "editor";
 
+type LoadSeriesOptions = {
+  preferredSlug?: string | null;
+  preferredEntrySlug?: string | null;
+  autoSelectFirst?: boolean;
+  preferredMobilePanel?: SeriesMobilePanel;
+  preferredPostsView?: SeriesPostsMobileView;
+};
+
 const emptySeriesForm: AdminSeriesMetadata = {
   slug: "",
   name: "",
@@ -49,6 +57,12 @@ const emptySeriesPostForm: AdminSeriesPost = {
   author: "",
   date: new Date().toISOString().split("T")[0],
 };
+
+const createEmptySeriesPostForm = (seriesSlug = "", author = ""): AdminSeriesPost => ({
+  ...emptySeriesPostForm,
+  seriesSlug,
+  author,
+});
 
 export default function SeriesManager() {
   const { user } = useAuthStore();
@@ -125,11 +139,12 @@ export default function SeriesManager() {
     setSelectedSeriesSlug(series.metadata.slug);
     setSeriesForm(series.metadata);
     setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      seriesSlug: series.metadata.slug,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
+    setEntryForm(
+      createEmptySeriesPostForm(
+        series.metadata.slug,
+        user?.user_metadata?.full_name || user?.email || "Guest",
+      ),
+    );
     setEntryPreview(false);
     setSeriesError(null);
     setSeriesSuccess(null);
@@ -141,10 +156,12 @@ export default function SeriesManager() {
     setSelectedSeriesSlug(null);
     setSeriesForm(emptySeriesForm);
     setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
+    setEntryForm(
+      createEmptySeriesPostForm(
+        "",
+        user?.user_metadata?.full_name || user?.email || "Guest",
+      ),
+    );
     setEntryPreview(false);
     setSeriesError(null);
     setSeriesSuccess(null);
@@ -159,11 +176,12 @@ export default function SeriesManager() {
     }
 
     setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      seriesSlug: selectedSeriesSlug || seriesForm.slug,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
+    setEntryForm(
+      createEmptySeriesPostForm(
+        selectedSeriesSlug || seriesForm.slug,
+        user?.user_metadata?.full_name || user?.email || "Guest",
+      ),
+    );
     setEntryPreview(false);
     setSeriesError(null);
     setSeriesSuccess(null);
@@ -181,12 +199,18 @@ export default function SeriesManager() {
     setMobilePostsView("editor");
   };
 
-  const loadSeries = async (preferredSlug?: string | null) => {
+  const loadSeries = async ({
+    preferredSlug,
+    preferredEntrySlug,
+    autoSelectFirst = false,
+    preferredMobilePanel,
+    preferredPostsView,
+  }: LoadSeriesOptions = {}) => {
     setLoadingSeries(true);
     setSeriesError(null);
 
     try {
-      const response = await fetch("/api/series");
+      const response = await fetch("/api/series", { cache: 'no-store' });
       if (!response.ok) {
         throw new Error("Failed to load series");
       }
@@ -198,30 +222,72 @@ export default function SeriesManager() {
 
       setSeriesList(sortedSeries);
 
-      const nextSlug = preferredSlug ?? selectedSeriesSlug;
-      if (!nextSlug) {
-        return;
+      if (sortedSeries.length === 0) {
+        startNewSeries();
+        return {
+          series: sortedSeries,
+          selectedSeries: null,
+          selectedEntry: null,
+        };
       }
 
-      const matchedSeries = sortedSeries.find(
-        (series) => series.metadata.slug === nextSlug,
-      );
-      if (matchedSeries) {
-        selectSeries(matchedSeries);
-      } else {
-        startNewSeries();
+      const nextSlug =
+        preferredSlug ??
+        (autoSelectFirst ? sortedSeries[0]?.metadata.slug : selectedSeriesSlug);
+      if (!nextSlug) {
+        return {
+          series: sortedSeries,
+          selectedSeries: null,
+          selectedEntry: null,
+        };
       }
+
+      const matchedSeries =
+        sortedSeries.find((series) => series.metadata.slug === nextSlug) ??
+        (autoSelectFirst ? sortedSeries[0] : null);
+      if (!matchedSeries) {
+        startNewSeries();
+        return {
+          series: sortedSeries,
+          selectedSeries: null,
+          selectedEntry: null,
+        };
+      }
+
+      selectSeries(matchedSeries);
+
+      const nextEntrySlug =
+        preferredEntrySlug ??
+        (nextSlug === selectedSeriesSlug ? selectedEntrySlug : null);
+      const matchedEntry =
+        nextEntrySlug
+          ? matchedSeries.posts.find((post) => post.slug === nextEntrySlug) ?? null
+          : null;
+
+      if (matchedEntry) {
+        setSelectedEntrySlug(matchedEntry.slug);
+        setEntryForm(matchedEntry);
+        setMobilePanel(preferredMobilePanel ?? "posts");
+        setMobilePostsView(preferredPostsView ?? "editor");
+      }
+
+      return {
+        series: sortedSeries,
+        selectedSeries: matchedSeries,
+        selectedEntry: matchedEntry,
+      };
     } catch (loadError) {
-      setSeriesError(
-        loadError instanceof Error ? loadError.message : "Failed to load series",
-      );
+      const message =
+        loadError instanceof Error ? loadError.message : "Failed to load series";
+      setSeriesError(message);
+      throw new Error(message);
     } finally {
       setLoadingSeries(false);
     }
   };
 
   useEffect(() => {
-    void loadSeries();
+    void loadSeries().catch(() => undefined);
   }, []);
 
   const uploadImageFile = async (file: File) => {
@@ -391,6 +457,7 @@ export default function SeriesManager() {
     setSeriesSuccess(null);
 
     try {
+      const isEditingSeries = Boolean(selectedSeriesSlug);
       if (
         !seriesForm.name ||
         !seriesForm.slug ||
@@ -419,13 +486,12 @@ export default function SeriesManager() {
 
       const payload = await response.json();
       const savedSlug = payload.data.slug as string;
+      await loadSeries({ preferredSlug: savedSlug });
       setSeriesSuccess(
-        selectedSeriesSlug
+        isEditingSeries
           ? "Series updated successfully."
           : "Series created successfully.",
       );
-      setSelectedSeriesSlug(savedSlug);
-      await loadSeries(savedSlug);
       setMobilePanel("details");
     } catch (submitError) {
       setSeriesError(
@@ -476,8 +542,7 @@ export default function SeriesManager() {
         throw new Error(errorData.error || "Failed to delete series");
       }
 
-      startNewSeries();
-      await loadSeries(null);
+      await loadSeries({ autoSelectFirst: true });
       setSeriesSuccess("Series deleted successfully.");
       setMobilePanel("series");
     } catch (deleteError) {
@@ -512,6 +577,7 @@ export default function SeriesManager() {
     setSeriesSuccess(null);
 
     try {
+      const isEditingEntry = Boolean(selectedEntrySlug);
       if (
         !entryForm.title ||
         !entryForm.slug ||
@@ -549,14 +615,17 @@ export default function SeriesManager() {
 
       const payload = await response.json();
       const savedPost = payload.data as AdminSeriesPost;
+      await loadSeries({
+        preferredSlug: seriesSlug,
+        preferredEntrySlug: savedPost.slug,
+        preferredMobilePanel: "posts",
+        preferredPostsView: "editor",
+      });
       setSeriesSuccess(
-        selectedEntrySlug
+        isEditingEntry
           ? "Series post updated successfully."
           : "Series post created successfully.",
       );
-      await loadSeries(seriesSlug);
-      setSelectedEntrySlug(savedPost.slug);
-      setEntryForm(savedPost);
       setMobilePanel("posts");
       setMobilePostsView("editor");
     } catch (submitError) {
@@ -609,8 +678,16 @@ export default function SeriesManager() {
         throw new Error(errorData.error || "Failed to delete series post");
       }
 
-      await loadSeries(seriesSlug);
-      startNewEntry();
+      await loadSeries({ preferredSlug: seriesSlug, preferredMobilePanel: "posts" });
+      setSelectedEntrySlug(null);
+      setEntryForm(
+        createEmptySeriesPostForm(
+          seriesSlug,
+          user?.user_metadata?.full_name || user?.email || "Guest",
+        ),
+      );
+      setMobilePanel("posts");
+      setMobilePostsView("editor");
       setSeriesSuccess("Series post deleted successfully.");
     } catch (deleteError) {
       setSeriesError(

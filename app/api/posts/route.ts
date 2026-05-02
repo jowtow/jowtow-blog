@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getStore } from '@netlify/blobs';
 import { verifyAdminAuth } from '@/lib/serverAuth';
+import { adminMutableJsonResponse } from '@/lib/adminApi';
 
 function revalidatePostPaths(slugs: string[]) {
   revalidatePath('/');
@@ -87,7 +88,7 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(posts.filter(Boolean));
+    return adminMutableJsonResponse(posts.filter(Boolean));
   } catch (error) {
     console.error('Error fetching posts:', error);
     return NextResponse.json(

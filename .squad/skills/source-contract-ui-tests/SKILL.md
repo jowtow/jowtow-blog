@@ -28,3 +28,11 @@ When the repo does not have a browser or DOM component test harness, protect hig
 - When those mobile cards live inside an `overflow-hidden` workspace panel, lock `min-w-0 overflow-hidden` on the card itself so child copy cannot silently widen the card and clip its controls.
 - When mobile cards include action buttons beneath preview text, also lock the preview clamp (`truncate`/`line-clamp-*` plus word-breaking as needed) and the button-row grid so long copy cannot push or visually clip the mobile controls.
 - This keeps “remove mobile horizontal overflow” fixes from accidentally flattening the desktop layout or reintroducing page-level sideways scroll on small screens.
+
+## Freshness contract add-on
+
+- For admin surfaces that must reflect the latest server state, source-contract tests can lock the freshness boundary without a DOM harness:
+  - loader fetches use `cache: 'no-store'`
+  - mutable admin GET handlers emit `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`
+  - mutation success paths `await` the authoritative reload before showing success or navigating away
+- This catches the common “save succeeded, but the screen still looks stale” regression even when the underlying bug lives in callback ordering rather than layout markup.
