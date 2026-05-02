@@ -18,4 +18,11 @@ When the repo does not have a browser or DOM component test harness, protect hig
 
 ## Example here
 
-- `tests/adminMobileContracts.test.ts` protects the admin shell scroll contract, sticky tab strip affordances, and the guarded Collections bootstrap selection flow.
+- `tests/adminMobileContracts.test.ts` protects the admin shell scroll contract, sticky tab strip affordances, the guarded Collections bootstrap selection flow, and the Collections item-workspace split where mobile cards stay `md:hidden`-opposed to a desktop-only dense table scroll wrapper.
+
+## Reviewer gate add-on
+
+- For responsive data-workspace fixes, pair assertions for both sides of the breakpoint boundary:
+  - mobile presentation stays on the stacked/card surface (`md:hidden` or equivalent)
+  - any `overflow-x-auto` wrapper and wide `min-w-[...]` table shell stay gated to desktop breakpoints
+- This keeps “remove mobile horizontal overflow” fixes from accidentally flattening the desktop layout or reintroducing page-level sideways scroll on small screens.

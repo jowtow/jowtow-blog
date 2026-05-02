@@ -921,9 +921,9 @@ export default function CollectionsManager() {
           </div>
         </form>
 
-        <section className={`${mobilePanel === "items" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 xl:block`}>
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:px-5 md:py-4">
-            <div>
+        <section className={`${mobilePanel === "items" ? "block" : "hidden"} w-full min-w-0 overflow-hidden rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 xl:block`}>
+          <div className="flex flex-col gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:flex-row md:items-start md:justify-between md:px-5 md:py-4">
+            <div className="min-w-0">
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">Item Workspace</h3>
               <p className="mt-1 text-sm text-[var(--text-light)]/60">
                 {selectedCollectionSlug
@@ -931,8 +931,8 @@ export default function CollectionsManager() {
                   : "Select or create a collection to unlock item editing."}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-3 py-2 text-right">
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
+              <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-3 py-2 text-left md:text-right">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Visible items</p>
                 <p className="text-lg font-semibold text-[var(--color-primary)]">{sortedItems.length}</p>
               </div>
@@ -940,7 +940,7 @@ export default function CollectionsManager() {
                 type="button"
                 onClick={openNewItemEditor}
                 disabled={!selectedCollectionSlug}
-                className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] disabled:opacity-50"
+                className="w-full cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] disabled:opacity-50 md:w-auto"
               >
                 New Item
               </button>

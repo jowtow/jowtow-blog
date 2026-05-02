@@ -59,3 +59,45 @@ test('collections bootstrap selection is isolated from user-driven new state', a
     /\[selectCollection, startNewCollection\],/,
   );
 });
+
+test('collections item workspace stacks header controls on mobile without changing desktop density', async () => {
+  const collectionsManager = await readSource('components/CollectionsManager/CollectionsManager.tsx');
+
+  assert.match(
+    collectionsManager,
+    /<section className=\{\`\$\{mobilePanel === "items" \? "block" : "hidden"\} w-full min-w-0 overflow-hidden rounded-2xl border border-\[var\(--color-secondary\)\]\/35 bg-black\/25 xl:block`\}>/,
+  );
+  assert.match(
+    collectionsManager,
+    /className="flex flex-col gap-4 border-b border-\[var\(--color-secondary\)\]\/20 px-4 py-3 md:flex-row md:items-start md:justify-between md:px-5 md:py-4"/,
+  );
+  assert.match(
+    collectionsManager,
+    /className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end"/,
+  );
+  assert.match(
+    collectionsManager,
+    /className="w-full cursor-pointer rounded-md bg-\[var\(--color-primary\)\] px-4 py-2 font-semibold text-\[var\(--text-color-dark\)\] disabled:opacity-50 md:w-auto"/,
+  );
+});
+
+test('collections item workspace keeps mobile cards and desktop-only horizontal table scroll', async () => {
+  const collectionsManager = await readSource('components/CollectionsManager/CollectionsManager.tsx');
+
+  assert.match(
+    collectionsManager,
+    /grid gap-4 xl:grid-cols-\[240px_minmax\(320px,400px\)_minmax\(0,1fr\)\]/,
+  );
+  assert.match(
+    collectionsManager,
+    /<section className=\{`\$\{mobilePanel === "items" \? "block" : "hidden"\} w-full min-w-0 overflow-hidden rounded-2xl border border-\[var\(--color-secondary\)\]\/35 bg-black\/25 xl:block`\}>/,
+  );
+  assert.match(
+    collectionsManager,
+    /<div className="grid gap-3 px-4 py-4 md:hidden">[\s\S]*Open Editor/s,
+  );
+  assert.match(
+    collectionsManager,
+    /<div className="hidden overflow-x-auto md:block">[\s\S]*<div className="min-w-\[720px\]">[\s\S]*grid-cols-\[minmax\(0,2\.1fr\)_150px_120px_120px\][\s\S]*onDoubleClick=\{\(\) => openItemEditor\(item\)\}/s,
+  );
+});
