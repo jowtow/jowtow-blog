@@ -16,37 +16,40 @@ export default function AdminLoginPage() {
   }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
-    // Show message after a short delay
     const timer = setTimeout(() => setShowMessage(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-xl mb-4">Initializing authentication...</p>
-        </div>
+      <div className="w-full max-w-lg rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/25 px-6 py-8 text-center shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]/70">Admin access</p>
+        <p className="mt-3 text-lg text-[var(--text-light)]/80">Initializing authentication...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center max-w-md">
-        <h1 className="text-3xl font-bold mb-6">Admin Login</h1>
-        {showMessage && (
-          <div className="mb-6 p-4 bg-blue-100 text-blue-800 rounded">
-            <p className="mb-4">Click the button below to log in with Netlify Identity</p>
-            <button
-              onClick={loginWithNetlify}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
-            >
-              Login with Netlify Identity
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="w-full max-w-lg rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/25 px-6 py-8 shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
+      <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]/70">Admin access</p>
+      <h1 className="mt-2 text-2xl font-semibold text-[var(--color-primary)]">Sign in</h1>
+      <p className="mt-2 text-sm text-[var(--text-light)]/65">
+        Use Netlify Identity to enter the compact admin workspace.
+      </p>
+
+      {showMessage && (
+        <div className="mt-5 rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 p-4">
+          <p className="mb-4 text-sm text-[var(--text-light)]/75">
+            Continue with the site&apos;s Netlify Identity flow.
+          </p>
+          <button
+            onClick={loginWithNetlify}
+            className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
+          >
+            Login with Netlify Identity
+          </button>
+        </div>
+      )}
     </div>
   );
 }

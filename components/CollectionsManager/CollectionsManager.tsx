@@ -626,7 +626,7 @@ export default function CollectionsManager() {
   };
 
   return (
-    <div className="space-y-5 text-[var(--text-light)]">
+    <div className="space-y-4 text-[var(--text-light)]">
       {(error || success) && (
         <div
           className={`rounded-xl border px-4 py-3 ${
@@ -639,8 +639,8 @@ export default function CollectionsManager() {
         </div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[260px_minmax(340px,420px)_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4">
+      <div className="grid gap-4 xl:grid-cols-[240px_minmax(320px,400px)_minmax(0,1fr)]">
+        <aside className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-[var(--color-primary)]">Collections</h2>
@@ -713,9 +713,9 @@ export default function CollectionsManager() {
 
         <form
           onSubmit={handleCollectionSubmit}
-          className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-5"
+          className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
         >
-          <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">
                 {selectedCollectionSlug ? "Collection Editor" : "New Collection"}
@@ -732,7 +732,7 @@ export default function CollectionsManager() {
             </div>
           </div>
 
-          <div className="grid gap-5">
+          <div className="grid gap-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                 Collection Name
@@ -756,7 +756,7 @@ export default function CollectionsManager() {
               />
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                   Slug
@@ -837,7 +837,7 @@ export default function CollectionsManager() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="submit"
               disabled={collectionSubmitting}
@@ -877,7 +877,7 @@ export default function CollectionsManager() {
         </form>
 
         <section className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25">
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:px-5 md:py-4">
             <div>
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">Item Workspace</h3>
               <p className="mt-1 text-sm text-[var(--text-light)]/60">
@@ -903,11 +903,11 @@ export default function CollectionsManager() {
           </div>
 
           {!selectedCollectionSlug ? (
-            <div className="px-5 py-8 text-[var(--text-light)]/65">
+            <div className="px-4 py-6 text-[var(--text-light)]/65 md:px-5 md:py-8">
               Save a collection, then open the item workspace from here.
             </div>
           ) : sortedItems.length === 0 ? (
-            <div className="px-5 py-8 text-[var(--text-light)]/65">
+            <div className="px-4 py-6 text-[var(--text-light)]/65 md:px-5 md:py-8">
               No items in this collection yet. Use <span className="text-[var(--color-primary)]">New Item</span> to add the first one.
             </div>
           ) : (
@@ -984,7 +984,7 @@ export default function CollectionsManager() {
       {itemEditorOpen && (
         <div className="fixed inset-0 z-[90] bg-black/80 p-3 backdrop-blur-sm lg:p-6">
           <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-[var(--color-secondary)]/35 bg-[var(--color-dark)] shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:px-5 md:py-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]/75">Fullscreen item editor</p>
                 <h3 className="mt-1 text-2xl font-semibold text-[var(--color-primary)]">
@@ -1007,7 +1007,7 @@ export default function CollectionsManager() {
 
             <form onSubmit={handleItemSubmit} className="grid min-h-0 flex-1 gap-5 p-4 xl:grid-cols-[360px_minmax(0,1fr)] xl:p-5">
               <section className="min-h-0 overflow-y-auto rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 p-4">
-                <div className="grid gap-5">
+                <div className="grid gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                       Title
@@ -1097,7 +1097,7 @@ export default function CollectionsManager() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="submit"
                     disabled={itemSubmitting || !selectedCollectionSlug}

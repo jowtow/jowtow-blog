@@ -366,9 +366,9 @@ export default function ImagesManager() {
   };
 
   return (
-    <div className="w-full py-8 text-[var(--text-light)]">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">
+    <div className="w-full py-2 text-[var(--text-light)] md:py-3">
+      <div className="mb-4">
+        <h2 className="mb-2 text-xl font-bold text-[var(--color-primary)] md:text-2xl">
           Blob Image Library
         </h2>
         <p className="text-[var(--text-light)]/70">
@@ -395,7 +395,7 @@ export default function ImagesManager() {
         </div>
       )}
 
-      <div className="mb-6 rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 p-4">
+      <div className="mb-4 rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 p-3 md:p-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm text-[var(--text-light)]/70">Stored images</p>
@@ -453,16 +453,16 @@ export default function ImagesManager() {
       </div>
 
       {loading ? (
-        <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+        <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
           Loading images...
         </div>
       ) : images.length === 0 ? (
-        <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+        <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
           No images found in blob storage yet.
         </div>
       ) : (
-        <div className="rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-secondary)]/20 bg-black/30 text-sm">
+        <div className="overflow-hidden rounded-lg border border-[var(--color-secondary)]/25 bg-black/20">
+          <div className="flex items-center justify-between border-b border-[var(--color-secondary)]/20 bg-black/30 px-4 py-2.5 text-sm">
             <label className="flex items-center gap-2 text-[var(--text-light)]/80">
               <input
                 type="checkbox"
@@ -496,7 +496,7 @@ export default function ImagesManager() {
               return (
                 <div
                   key={image.key}
-                  className="flex flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between"
                 >
                   <div className="flex gap-4 items-start">
                     <input
@@ -505,7 +505,7 @@ export default function ImagesManager() {
                       onChange={() => toggleSelection(image.key)}
                       className="mt-1"
                     />
-                    <div className="h-20 w-20 rounded-md border border-[var(--color-secondary)]/25 bg-black/30 overflow-hidden flex items-center justify-center">
+                    <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center overflow-hidden rounded-md border border-[var(--color-secondary)]/25 bg-black/30">
                       <img
                         src={image.url}
                         alt={image.key}

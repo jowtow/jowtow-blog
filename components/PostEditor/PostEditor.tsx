@@ -333,9 +333,9 @@ export default function PostEditor({
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 text-[var(--text-light)]">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 text-[var(--color-primary)]">
+    <div className="mx-auto max-w-4xl py-2 text-[var(--text-light)] md:py-3">
+      <div className="mb-4">
+        <h2 className="mb-2 text-xl font-bold text-[var(--color-primary)] md:text-2xl">
           {mode === "edit" ? "Edit Post" : "Create New Post"}
         </h2>
         <p className="text-[var(--text-light)]/70">
@@ -362,7 +362,7 @@ export default function PostEditor({
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5"
+        className="space-y-5 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
       >
         {/* Title */}
         <div>
@@ -481,11 +481,11 @@ export default function PostEditor({
               value={formData.markdown}
               onChange={handleInputChange}
               placeholder="# Heading&#10;&#10;Write your post in **Markdown** format..."
-              className="w-full h-96 px-4 py-2 border border-[var(--color-secondary)]/40 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60 resize-vertical bg-black/35"
+              className="h-80 w-full resize-vertical rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60 md:h-96"
               required
             />
           ) : (
-            <div className="w-full min-h-96 px-4 py-3 border border-[var(--color-secondary)]/40 rounded-lg bg-black/40 overflow-auto leading-7">
+            <div className="min-h-80 w-full overflow-auto rounded-lg border border-[var(--color-secondary)]/40 bg-black/40 px-4 py-3 leading-7 md:min-h-96">
               <MarkdownRenderer content={formData.markdown} />
             </div>
           )}
@@ -501,7 +501,7 @@ export default function PostEditor({
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-2 bg-[var(--color-primary)] hover:brightness-95 disabled:opacity-60 text-[var(--text-color-dark)] font-semibold rounded-lg cursor-pointer transition"
+            className="cursor-pointer rounded-lg bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95 disabled:opacity-60"
           >
             {submitting
               ? mode === "edit"
@@ -525,7 +525,7 @@ export default function PostEditor({
                   : emptyFormData,
               )
             }
-            className="px-6 py-2 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/50 text-[var(--text-light)] font-medium rounded-lg cursor-pointer transition"
+            className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-2 font-medium text-[var(--text-light)] transition hover:bg-black/50"
           >
             {mode === "edit" ? "Reset" : "Clear"}
           </button>
@@ -534,7 +534,7 @@ export default function PostEditor({
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="px-6 py-2 border border-red-400/50 bg-red-500/15 hover:bg-red-500/25 disabled:opacity-60 text-red-200 font-medium rounded-lg cursor-pointer transition"
+              className="cursor-pointer rounded-lg border border-red-400/50 bg-red-500/15 px-5 py-2 font-medium text-red-200 transition hover:bg-red-500/25 disabled:opacity-60"
             >
               {deleting ? "Deleting..." : "Delete Post"}
             </button>
@@ -543,7 +543,7 @@ export default function PostEditor({
             <button
               type="button"
               onClick={onCancel}
-              className="px-6 py-2 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/50 text-[var(--text-light)] font-medium rounded-lg cursor-pointer transition"
+              className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-2 font-medium text-[var(--text-light)] transition hover:bg-black/50"
             >
               Cancel
             </button>

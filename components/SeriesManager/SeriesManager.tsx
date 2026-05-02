@@ -585,8 +585,8 @@ export default function SeriesManager() {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] text-[var(--text-light)]">
-      <aside className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4">
+    <div className="grid gap-4 text-[var(--text-light)] xl:grid-cols-[280px_minmax(0,1fr)]">
+      <aside className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-xl font-semibold text-[var(--color-primary)]">
@@ -644,7 +644,7 @@ export default function SeriesManager() {
         )}
       </aside>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {(seriesError || seriesSuccess) && (
           <div
             className={`rounded-md border px-4 py-3 ${
@@ -659,7 +659,7 @@ export default function SeriesManager() {
 
         <form
           onSubmit={handleSeriesSubmit}
-          className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5 space-y-5"
+          className="space-y-4 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
         >
           <div>
             <h3 className="text-xl font-semibold text-[var(--color-primary)]">
@@ -670,7 +670,7 @@ export default function SeriesManager() {
             </p>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
                 Series Name
@@ -828,7 +828,7 @@ export default function SeriesManager() {
           </div>
         </form>
 
-        <div className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5 space-y-5">
+        <div className="space-y-4 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">
@@ -891,7 +891,7 @@ export default function SeriesManager() {
 
           <form
             onSubmit={handleEntrySubmit}
-            className="grid gap-5 border-t border-[var(--color-secondary)]/20 pt-5"
+            className="grid gap-4 border-t border-[var(--color-secondary)]/20 pt-4"
           >
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
@@ -925,7 +925,7 @@ export default function SeriesManager() {
               className="hidden"
             />
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
                   Title

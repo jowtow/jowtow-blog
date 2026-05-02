@@ -38,6 +38,8 @@ a {
   --secondary: #9caf88;
   --color-primary: #7fff00;
   --primary: #7fff00;
+  --admin-header-height: 4rem;
+  --admin-footer-height: 1px;
 }
 
 body {

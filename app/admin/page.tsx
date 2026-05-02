@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useAuthStore, logoutFromNetlify } from '@/lib/auth';
+import { useAuthStore } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import PostEditor from '@/components/PostEditor/PostEditor';
 import SeriesManager from '@/components/SeriesManager/SeriesManager';
@@ -75,12 +75,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadPosts();
+      void loadPosts();
     }
   }, [isAuthenticated]);
 
   if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+    return <div className="flex h-full min-h-[40vh] items-center justify-center text-[var(--text-light)]/75">Loading admin workspace...</div>;
   }
 
   if (!isAuthenticated) {
@@ -88,166 +88,128 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-dark)] text-[var(--text-light)]">
-      <nav className="border-b border-[var(--color-secondary)]/30 bg-[var(--color-dark)]/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between gap-4 px-4 py-4 lg:px-6">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-[var(--color-secondary)]/80">Control Panel</p>
-            <h1 className="text-2xl font-semibold text-[var(--color-primary)]">Admin</h1>
-          </div>
-          <button
-            onClick={async () => {
-              await logoutFromNetlify();
-              router.push('/');
-            }}
-            className="cursor-pointer rounded-md border border-red-400/50 bg-red-500/20 px-4 py-2 font-semibold text-red-200 transition-colors hover:bg-red-500/35"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <div className="mx-auto w-full max-w-[1680px] px-4 py-6 lg:px-6 lg:py-8">
-        <div className="overflow-hidden rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
-          <div className="border-b border-[var(--color-secondary)]/25 bg-black/30 px-3 py-3 lg:px-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1900px] flex-1 flex-col">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/20 shadow-[0_20px_80px_rgba(0,0,0,0.32)]">
+        <div className="shrink-0 border-b border-[var(--color-secondary)]/20 bg-black/25 px-4 py-3 md:px-5 md:py-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-secondary)]/70">Control panel</p>
+              <h1 className="mt-1 text-xl font-semibold text-[var(--color-primary)] md:text-2xl">Admin workspace</h1>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                Signed in as {user?.user_metadata?.full_name || user?.email || 'admin'}.
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {tabs.map((tab) => {
-                const isActive = tab.key === activeTab;
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`min-w-[120px] rounded-lg px-4 py-3 text-left font-medium transition-colors ${
-                      isActive
-                        ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/50'
-                        : 'text-[var(--text-light)]/70 hover:bg-white/5 hover:text-[var(--text-light)]'
-                    }`}
-                  >
-                    {tab.key === 'create' && editingPost ? 'Edit Post' : tab.label}
-                  </button>
-                );
-              })}
+              <button
+                onClick={() => {
+                  setEditingPost(null);
+                  setActiveTab('create');
+                }}
+                className="cursor-pointer rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
+              >
+                New post
+              </button>
+              <button
+                onClick={() => void loadPosts()}
+                className="cursor-pointer rounded-md border border-[var(--color-secondary)]/35 bg-black/30 px-3 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/45"
+              >
+                Refresh posts
+              </button>
             </div>
           </div>
+        </div>
 
+        <div className="shrink-0 border-b border-[var(--color-secondary)]/20 bg-[var(--color-dark)]/92 px-3 py-2 backdrop-blur md:sticky md:top-0 md:z-20 md:px-4">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => {
+              const isActive = tab.key === activeTab;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`min-w-[112px] rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[var(--color-primary)]/12 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/45'
+                      : 'text-[var(--text-light)]/70 hover:bg-white/5 hover:text-[var(--text-light)]'
+                  }`}
+                >
+                  {tab.key === 'create' && editingPost ? 'Edit Post' : tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div
             className={
               activeTabConfig.mode === 'wide'
-                ? 'w-full px-4 py-4 lg:px-5 lg:py-5'
-                : 'mx-auto w-full max-w-6xl px-4 py-6'
+                ? 'w-full px-3 py-3 md:px-4 md:py-4'
+                : 'mx-auto w-full max-w-7xl px-3 py-3 md:px-4 md:py-4'
             }
           >
             {activeTab === 'dashboard' && (
-              <div>
-                <h2 className="mb-4 text-xl font-semibold text-[var(--color-primary)]">Admin Dashboard</h2>
-
-                <div className="mb-6 rounded-md border border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 p-4">
-                  <p className="text-[var(--color-primary)]">
-                    <strong>Welcome!</strong> You are logged in successfully.
-                  </p>
-                </div>
-
-                <div className="mb-6">
-                  <h3 className="mb-2 text-lg font-semibold text-[var(--color-secondary)]">User Information</h3>
-                  <div className="rounded-md border border-[var(--color-secondary)]/25 bg-black/20 p-4">
-                    <p className="mb-2">
-                      <strong>Email:</strong> {user?.email}
-                    </p>
-                    {user?.user_metadata?.full_name && (
-                      <p>
-                        <strong>Name:</strong> {user.user_metadata.full_name}
-                      </p>
-                    )}
+              <div className="grid gap-4">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/8 px-4 py-3">
+                    <p className="text-sm font-medium text-[var(--color-primary)]">Welcome back — the admin shell is locked to the viewport on larger screens.</p>
                   </div>
-                </div>
-
-                <div className="mb-6">
-                  <h3 className="mb-2 text-lg font-semibold text-[var(--color-secondary)]">Quick Actions</h3>
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={() => {
-                        setEditingPost(null);
-                        setActiveTab('create');
-                      }}
-                      className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
-                    >
-                      Create New Post
-                    </button>
-                    <button
-                      onClick={() => loadPosts()}
-                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
-                    >
-                      Refresh Posts
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('series')}
-                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
-                    >
-                      Manage Series
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('collections')}
-                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
-                    >
-                      Manage Collections
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('images')}
-                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
-                    >
-                      Manage Images
-                    </button>
+                  <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-3 text-sm text-[var(--text-light)]/75">
+                    <p><strong className="text-[var(--color-secondary)]">User:</strong> {user?.email}</p>
+                    {user?.user_metadata?.full_name && (
+                      <p className="mt-1"><strong className="text-[var(--color-secondary)]">Name:</strong> {user.user_metadata.full_name}</p>
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <div className="mb-3 flex items-center justify-between gap-4">
-                    <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Manage Existing Posts</h3>
-                    <span className="text-sm text-[var(--text-light)]/60">Dynamic admin posts only</span>
+                    <h2 className="text-lg font-semibold text-[var(--color-secondary)]">Manage existing posts</h2>
+                    <span className="text-xs uppercase tracking-[0.18em] text-[var(--text-light)]/45">Dynamic posts</span>
                   </div>
 
                   {postsError && (
-                    <div className="mb-4 rounded-md border border-red-400/35 bg-red-500/10 px-4 py-3 text-red-200">
+                    <div className="mb-3 rounded-md border border-red-400/35 bg-red-500/10 px-4 py-3 text-red-200">
                       {postsError}
                     </div>
                   )}
 
                   {postsLoading ? (
-                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
                       Loading posts...
                     </div>
                   ) : posts.length === 0 ? (
-                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
                       No admin-created posts yet.
                     </div>
                   ) : (
-                    <div className="grid gap-3">
+                    <div className="grid gap-2.5">
                       {posts.map((post) => (
                         <div
                           key={post.slug}
-                          className="flex flex-col gap-4 rounded-lg border border-[var(--color-secondary)]/25 bg-black/20 px-4 py-4 md:flex-row md:items-center md:justify-between"
+                          className="flex flex-col gap-3 rounded-lg border border-[var(--color-secondary)]/22 bg-black/20 px-4 py-3 md:flex-row md:items-center md:justify-between"
                         >
-                          <div>
-                            <p className="text-lg font-semibold text-[var(--color-primary)]">{post.title}</p>
-                            <p className="text-sm text-[var(--text-light)]/65">/{post.slug}</p>
-                            <p className="text-sm text-[var(--text-light)]/65">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-semibold text-[var(--color-primary)]">{post.title}</p>
+                            <p className="truncate text-sm text-[var(--text-light)]/62">/{post.slug}</p>
+                            <p className="text-sm text-[var(--text-light)]/58">
                               {post.date || 'No date'}
                               {post.author ? ` • ${post.author}` : ''}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-3">
+                          <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => {
                                 setEditingPost(post);
                                 setActiveTab('create');
                               }}
-                              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
+                              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => window.open(`/post/${post.slug}`, '_blank', 'noopener,noreferrer')}
-                              className="cursor-pointer rounded-md border border-[var(--color-secondary)]/45 bg-black/25 px-4 py-2 text-[var(--text-light)] transition hover:bg-black/40"
+                              className="cursor-pointer rounded-md border border-[var(--color-secondary)]/40 bg-black/25 px-3 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/40"
                             >
                               View
                             </button>
@@ -265,14 +227,14 @@ export default function AdminPage() {
                 mode={editingPost ? 'edit' : 'create'}
                 initialPost={editingPost}
                 onSuccess={() => {
-                  loadPosts();
+                  void loadPosts();
                   setTimeout(() => {
                     setEditingPost(null);
                     setActiveTab('dashboard');
                   }, 1200);
                 }}
                 onDelete={() => {
-                  loadPosts();
+                  void loadPosts();
                   setEditingPost(null);
                   setActiveTab('dashboard');
                 }}
@@ -284,13 +246,11 @@ export default function AdminPage() {
             )}
 
             {activeTab === 'series' && <SeriesManager />}
-
             {activeTab === 'collections' && <CollectionsManager />}
-
             {activeTab === 'images' && <ImagesManager />}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
