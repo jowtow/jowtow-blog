@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/auth";
 import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
@@ -28,6 +28,9 @@ type AdminSeries = {
   posts: AdminSeriesPost[];
 };
 
+type SeriesMobilePanel = "series" | "details" | "posts";
+type SeriesPostsMobileView = "list" | "editor";
+
 const emptySeriesForm: AdminSeriesMetadata = {
   slug: "",
   name: "",
@@ -54,24 +57,20 @@ export default function SeriesManager() {
   const [loadingSeries, setLoadingSeries] = useState(true);
   const [seriesError, setSeriesError] = useState<string | null>(null);
   const [seriesSuccess, setSeriesSuccess] = useState<string | null>(null);
-  const [selectedSeriesSlug, setSelectedSeriesSlug] = useState<string | null>(
-    null,
-  );
-  const [seriesForm, setSeriesForm] =
-    useState<AdminSeriesMetadata>(emptySeriesForm);
+  const [selectedSeriesSlug, setSelectedSeriesSlug] = useState<string | null>(null);
+  const [seriesForm, setSeriesForm] = useState<AdminSeriesMetadata>(emptySeriesForm);
   const [seriesSubmitting, setSeriesSubmitting] = useState(false);
   const [seriesDeleting, setSeriesDeleting] = useState(false);
-  const [entryForm, setEntryForm] =
-    useState<AdminSeriesPost>(emptySeriesPostForm);
+  const [entryForm, setEntryForm] = useState<AdminSeriesPost>(emptySeriesPostForm);
   const [entrySubmitting, setEntrySubmitting] = useState(false);
   const [entryDeleting, setEntryDeleting] = useState(false);
   const [entryPreview, setEntryPreview] = useState(false);
-  const [selectedEntrySlug, setSelectedEntrySlug] = useState<string | null>(
-    null,
-  );
+  const [selectedEntrySlug, setSelectedEntrySlug] = useState<string | null>(null);
   const [uploadingSeriesImage, setUploadingSeriesImage] = useState(false);
   const [uploadingEntryImage, setUploadingEntryImage] = useState(false);
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<SeriesMobilePanel>("series");
+  const [mobilePostsView, setMobilePostsView] = useState<SeriesPostsMobileView>("list");
   const seriesCoverInputRef = useRef<HTMLInputElement>(null);
   const entryCoverInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
@@ -105,14 +104,82 @@ export default function SeriesManager() {
         try {
           const token = netlifyIdentity.currentUser().token.access_token;
           setAuthToken(token);
-        } catch (error) {
-          console.error("Failed to get token:", error);
+        } catch (tokenError) {
+          console.error("Failed to get token:", tokenError);
         }
       }
     };
 
     getToken();
   }, [user]);
+
+  const generateSlug = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+
+  const selectSeries = (series: AdminSeries) => {
+    setSelectedSeriesSlug(series.metadata.slug);
+    setSeriesForm(series.metadata);
+    setSelectedEntrySlug(null);
+    setEntryForm({
+      ...emptySeriesPostForm,
+      seriesSlug: series.metadata.slug,
+      author: user?.user_metadata?.full_name || user?.email || "Guest",
+    });
+    setEntryPreview(false);
+    setSeriesError(null);
+    setSeriesSuccess(null);
+    setMobilePanel("details");
+    setMobilePostsView("list");
+  };
+
+  const startNewSeries = () => {
+    setSelectedSeriesSlug(null);
+    setSeriesForm(emptySeriesForm);
+    setSelectedEntrySlug(null);
+    setEntryForm({
+      ...emptySeriesPostForm,
+      author: user?.user_metadata?.full_name || user?.email || "Guest",
+    });
+    setEntryPreview(false);
+    setSeriesError(null);
+    setSeriesSuccess(null);
+    setMobilePanel("details");
+    setMobilePostsView("editor");
+  };
+
+  const startNewEntry = () => {
+    if (!selectedSeriesSlug && !seriesForm.slug) {
+      setSeriesError("Save the series before adding posts to it.");
+      return;
+    }
+
+    setSelectedEntrySlug(null);
+    setEntryForm({
+      ...emptySeriesPostForm,
+      seriesSlug: selectedSeriesSlug || seriesForm.slug,
+      author: user?.user_metadata?.full_name || user?.email || "Guest",
+    });
+    setEntryPreview(false);
+    setSeriesError(null);
+    setSeriesSuccess(null);
+    setMobilePanel("posts");
+    setMobilePostsView("editor");
+  };
+
+  const selectEntry = (post: AdminSeriesPost) => {
+    setSelectedEntrySlug(post.slug);
+    setEntryForm(post);
+    setEntryPreview(false);
+    setSeriesError(null);
+    setSeriesSuccess(null);
+    setMobilePanel("posts");
+    setMobilePostsView("editor");
+  };
 
   const loadSeries = async (preferredSlug?: string | null) => {
     setLoadingSeries(true);
@@ -144,9 +211,9 @@ export default function SeriesManager() {
       } else {
         startNewSeries();
       }
-    } catch (error) {
+    } catch (loadError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to load series",
+        loadError instanceof Error ? loadError.message : "Failed to load series",
       );
     } finally {
       setLoadingSeries(false);
@@ -154,16 +221,8 @@ export default function SeriesManager() {
   };
 
   useEffect(() => {
-    loadSeries();
+    void loadSeries();
   }, []);
-
-  const generateSlug = (value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-");
 
   const uploadImageFile = async (file: File) => {
     if (!authToken && !isLocalBypassEnabled) {
@@ -190,65 +249,13 @@ export default function SeriesManager() {
     return data.url as string;
   };
 
-  const selectSeries = (series: AdminSeries) => {
-    setSelectedSeriesSlug(series.metadata.slug);
-    setSeriesForm(series.metadata);
-    setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      seriesSlug: series.metadata.slug,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
-    setEntryPreview(false);
-    setSeriesError(null);
-    setSeriesSuccess(null);
-  };
-
-  const startNewSeries = () => {
-    setSelectedSeriesSlug(null);
-    setSeriesForm(emptySeriesForm);
-    setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
-    setEntryPreview(false);
-    setSeriesError(null);
-    setSeriesSuccess(null);
-  };
-
-  const startNewEntry = () => {
-    if (!selectedSeriesSlug && !seriesForm.slug) {
-      setSeriesError("Save the series before adding posts to it.");
-      return;
-    }
-
-    setSelectedEntrySlug(null);
-    setEntryForm({
-      ...emptySeriesPostForm,
-      seriesSlug: selectedSeriesSlug || seriesForm.slug,
-      author: user?.user_metadata?.full_name || user?.email || "Guest",
-    });
-    setEntryPreview(false);
-    setSeriesError(null);
-    setSeriesSuccess(null);
-  };
-
-  const selectEntry = (post: AdminSeriesPost) => {
-    setSelectedEntrySlug(post.slug);
-    setEntryForm(post);
-    setEntryPreview(false);
-    setSeriesError(null);
-    setSeriesSuccess(null);
-  };
-
   const insertInlineImage = (insertion: string) => {
     const textarea = entryTextAreaRef.current;
 
     if (!textarea) {
-      setEntryForm((prev) => ({
-        ...prev,
-        markdown: `${prev.markdown}${insertion}`,
+      setEntryForm((previous) => ({
+        ...previous,
+        markdown: `${previous.markdown}${insertion}`,
       }));
       return;
     }
@@ -260,7 +267,7 @@ export default function SeriesManager() {
       insertion +
       entryForm.markdown.slice(end);
 
-    setEntryForm((prev) => ({ ...prev, markdown: nextMarkdown }));
+    setEntryForm((previous) => ({ ...previous, markdown: nextMarkdown }));
 
     requestAnimationFrame(() => {
       textarea.focus();
@@ -280,10 +287,12 @@ export default function SeriesManager() {
 
     try {
       const url = await uploadImageFile(file);
-      setSeriesForm((prev) => ({ ...prev, image: url }));
-    } catch (error) {
+      setSeriesForm((previous) => ({ ...previous, image: url }));
+    } catch (uploadError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to upload image",
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Failed to upload image",
       );
     } finally {
       setUploadingSeriesImage(false);
@@ -302,10 +311,12 @@ export default function SeriesManager() {
 
     try {
       const url = await uploadImageFile(file);
-      setEntryForm((prev) => ({ ...prev, image: url }));
-    } catch (error) {
+      setEntryForm((previous) => ({ ...previous, image: url }));
+    } catch (uploadError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to upload image",
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Failed to upload image",
       );
     } finally {
       setUploadingEntryImage(false);
@@ -333,9 +344,11 @@ export default function SeriesManager() {
         }),
       );
       insertInlineImage(`\n${snippets.join("\n")}\n`);
-    } catch (error) {
+    } catch (uploadError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to upload image",
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Failed to upload image",
       );
     } finally {
       setUploadingInlineImage(false);
@@ -343,11 +356,25 @@ export default function SeriesManager() {
     }
   };
 
-  const currentSeries = selectedSeriesSlug
-    ? (seriesList.find(
-        (series) => series.metadata.slug === selectedSeriesSlug,
-      ) ?? null)
-    : null;
+  const currentSeries = useMemo(
+    () =>
+      selectedSeriesSlug
+        ? (seriesList.find(
+            (series) => series.metadata.slug === selectedSeriesSlug,
+          ) ?? null)
+        : null,
+    [selectedSeriesSlug, seriesList],
+  );
+
+  const sortedPosts = useMemo(() => {
+    if (!currentSeries) {
+      return [];
+    }
+
+    return currentSeries.posts
+      .slice()
+      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  }, [currentSeries]);
 
   const handleSeriesSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -399,9 +426,12 @@ export default function SeriesManager() {
       );
       setSelectedSeriesSlug(savedSlug);
       await loadSeries(savedSlug);
-    } catch (error) {
+      setMobilePanel("details");
+    } catch (submitError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to save series",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save series",
       );
     } finally {
       setSeriesSubmitting(false);
@@ -449,9 +479,12 @@ export default function SeriesManager() {
       startNewSeries();
       await loadSeries(null);
       setSeriesSuccess("Series deleted successfully.");
-    } catch (error) {
+      setMobilePanel("series");
+    } catch (deleteError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to delete series",
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete series",
       );
     } finally {
       setSeriesDeleting(false);
@@ -524,9 +557,13 @@ export default function SeriesManager() {
       await loadSeries(seriesSlug);
       setSelectedEntrySlug(savedPost.slug);
       setEntryForm(savedPost);
-    } catch (error) {
+      setMobilePanel("posts");
+      setMobilePostsView("editor");
+    } catch (submitError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to save series post",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save series post",
       );
     } finally {
       setEntrySubmitting(false);
@@ -575,527 +612,690 @@ export default function SeriesManager() {
       await loadSeries(seriesSlug);
       startNewEntry();
       setSeriesSuccess("Series post deleted successfully.");
-    } catch (error) {
+    } catch (deleteError) {
       setSeriesError(
-        error instanceof Error ? error.message : "Failed to delete series post",
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete series post",
       );
     } finally {
       setEntryDeleting(false);
     }
   };
 
+  const resetEntryForm = () => {
+    const matchedPost = currentSeries?.posts.find(
+      (post) => post.slug === selectedEntrySlug,
+    );
+    if (matchedPost) {
+      selectEntry(matchedPost);
+      return;
+    }
+
+    startNewEntry();
+  };
+
   return (
-    <div className="grid gap-4 text-[var(--text-light)] xl:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
+    <div className="space-y-4 text-[var(--text-light)]">
+      <div className="rounded-2xl border border-[var(--color-secondary)]/25 bg-black/20 p-3 lg:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--color-primary)]">
-              Series
-            </h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
+              Series workspace
+            </p>
             <p className="text-sm text-[var(--text-light)]/60">
-              Dynamic series only
+              Jump between browsing, editing metadata, and post drafting.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={startNewSeries}
-            className="px-3 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] rounded-md font-semibold cursor-pointer"
-          >
-            New Series
-          </button>
+          <span className="rounded-full border border-[var(--color-secondary)]/25 px-2.5 py-1 text-xs text-[var(--text-light)]/70">
+            {seriesList.length} total
+          </span>
         </div>
-
-        {loadingSeries ? (
-          <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-            Loading series...
-          </div>
-        ) : seriesList.length === 0 ? (
-          <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-            No dynamic series yet.
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {seriesList.map((series) => {
-              const isActive = series.metadata.slug === selectedSeriesSlug;
-              return (
-                <button
-                  key={series.metadata.slug}
-                  type="button"
-                  onClick={() => selectSeries(series)}
-                  className={`rounded-lg border px-4 py-3 text-left transition ${
-                    isActive
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                      : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
-                  }`}
-                >
-                  <p className="font-semibold text-[var(--color-primary)]">
-                    {series.metadata.name}
-                  </p>
-                  <p className="text-sm text-[var(--text-light)]/60">
-                    /{series.metadata.slug}
-                  </p>
-                  <p className="text-sm text-[var(--text-light)]/60">
-                    {series.posts.length} posts
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </aside>
-
-      <div className="grid gap-4">
-        {(seriesError || seriesSuccess) && (
-          <div
-            className={`rounded-md border px-4 py-3 ${
-              seriesError
-                ? "border-red-400/35 bg-red-500/10 text-red-200"
-                : "border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-            }`}
-          >
-            {seriesError || seriesSuccess}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSeriesSubmit}
-          className="space-y-4 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
-        >
-          <div>
-            <h3 className="text-xl font-semibold text-[var(--color-primary)]">
-              {selectedSeriesSlug ? "Edit Series" : "Create Series"}
-            </h3>
-            <p className="text-sm text-[var(--text-light)]/60 mt-1">
-              Series can render as one long page or as individual post pages.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Series Name
-              </label>
-              <input
-                type="text"
-                value={seriesForm.name}
-                onChange={(event) => {
-                  const name = event.target.value;
-                  setSeriesForm((prev) => ({
-                    ...prev,
-                    name,
-                    slug:
-                      !selectedSeriesSlug ||
-                      prev.slug === generateSlug(prev.name)
-                        ? generateSlug(name)
-                        : prev.slug,
-                  }));
-                }}
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Slug
-              </label>
-              <input
-                type="text"
-                value={seriesForm.slug}
-                onChange={(event) =>
-                  setSeriesForm((prev) => ({
-                    ...prev,
-                    slug: event.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Description
-              </label>
-              <textarea
-                value={seriesForm.description}
-                onChange={(event) =>
-                  setSeriesForm((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
-                }
-                className="w-full min-h-28 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg resize-y"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={seriesForm.date}
-                onChange={(event) =>
-                  setSeriesForm((prev) => ({
-                    ...prev,
-                    date: event.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Series Layout
-              </label>
-              <label className="flex items-center gap-3 px-4 py-3 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg">
-                <input
-                  type="checkbox"
-                  checked={seriesForm.individualPages}
-                  onChange={(event) =>
-                    setSeriesForm((prev) => ({
-                      ...prev,
-                      individualPages: event.target.checked,
-                    }))
-                  }
-                />
-                <span>Use individual pages for each series post</span>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-              Series Cover Image
-            </label>
-            <input
-              type="file"
-              ref={seriesCoverInputRef}
-              onChange={handleSeriesImageUpload}
-              accept="image/*"
-              disabled={uploadingSeriesImage}
-              className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
-            />
-            <p className="text-sm text-[var(--text-light)]/60 mt-2">
-              {uploadingSeriesImage
-                ? "Uploading series image..."
-                : "Upload a thumbnail or banner image for the series."}
-            </p>
-            {seriesForm.image && (
-              <img
-                src={seriesForm.image}
-                alt="Series cover preview"
-                className="mt-4 max-h-48 rounded border border-[var(--color-secondary)]/40"
-              />
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={seriesSubmitting}
-              className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-60"
-            >
-              {seriesSubmitting
-                ? "Saving..."
-                : selectedSeriesSlug
-                  ? "Save Series"
-                  : "Create Series"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (currentSeries) {
-                  selectSeries(currentSeries);
-                } else {
-                  startNewSeries();
-                }
-              }}
-              className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
-            >
-              {selectedSeriesSlug ? "Reset" : "Clear"}
-            </button>
-            {selectedSeriesSlug && (
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["series", "Series"],
+              ["details", "Details"],
+              ["posts", "Posts"],
+            ] as Array<[SeriesMobilePanel, string]>
+          ).map(([key, label]) => {
+            const isActive = mobilePanel === key;
+            return (
               <button
+                key={key}
                 type="button"
-                onClick={handleSeriesDelete}
-                disabled={seriesDeleting}
-                className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
+                onClick={() => setMobilePanel(key)}
+                className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                    : "border border-[var(--color-secondary)]/20 bg-black/25 text-[var(--text-light)]/75"
+                }`}
               >
-                {seriesDeleting ? "Deleting..." : "Delete Series"}
+                {label}
               </button>
-            )}
-          </div>
-        </form>
+            );
+          })}
+        </div>
+      </div>
 
-        <div className="space-y-4 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5">
-          <div className="flex items-center justify-between gap-4">
+      <div className="grid gap-4 text-[var(--text-light)] lg:grid-cols-[280px_minmax(0,1fr)]">
+        <aside
+          className={`${mobilePanel === "series" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 lg:block`}
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-xl font-semibold text-[var(--color-primary)]">
-                Series Posts
-              </h3>
-              <p className="text-sm text-[var(--text-light)]/60">
-                {selectedSeriesSlug
-                  ? `Managing posts in /${selectedSeriesSlug}`
-                  : "Save a series before adding posts."}
+              <h2 className="text-xl font-semibold text-[var(--color-primary)]">
+                Series
+              </h2>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                Dynamic series only.
               </p>
             </div>
             <button
               type="button"
-              onClick={startNewEntry}
-              disabled={!selectedSeriesSlug && !seriesForm.slug}
-              className="px-4 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-50"
+              onClick={startNewSeries}
+              className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-semibold text-[var(--text-color-dark)]"
             >
-              New Series Post
+              New
             </button>
           </div>
 
-          {currentSeries && currentSeries.posts.length > 0 ? (
-            <div className="grid gap-3">
-              {currentSeries.posts
-                .slice()
-                .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-                .map((post) => {
-                  const isActive = post.slug === selectedEntrySlug;
-                  return (
-                    <button
-                      key={post.slug}
-                      type="button"
-                      onClick={() => selectEntry(post)}
-                      className={`rounded-lg border px-4 py-3 text-left transition ${
-                        isActive
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                          : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
-                      }`}
-                    >
-                      <p className="font-semibold text-[var(--color-primary)]">
-                        {post.title}
-                      </p>
-                      <p className="text-sm text-[var(--text-light)]/60">
-                        /{post.slug}
-                      </p>
-                      <p className="text-sm text-[var(--text-light)]/60">
-                        {post.date}
-                      </p>
-                    </button>
-                  );
-                })}
+          <div className="mb-4 rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
+              Library
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--color-primary)]">
+              {seriesList.length}
+            </p>
+            <p className="text-sm text-[var(--text-light)]/55">series available</p>
+          </div>
+
+          {loadingSeries ? (
+            <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+              Loading series...
+            </div>
+          ) : seriesList.length === 0 ? (
+            <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+              No dynamic series yet.
             </div>
           ) : (
-            <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-              {selectedSeriesSlug
-                ? "No posts in this series yet."
-                : "Create a series first to start adding posts."}
+            <div className="grid gap-3">
+              {seriesList.map((series) => {
+                const isActive = series.metadata.slug === selectedSeriesSlug;
+                return (
+                  <button
+                    key={series.metadata.slug}
+                    type="button"
+                    onClick={() => selectSeries(series)}
+                    className={`rounded-xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                        : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
+                    }`}
+                  >
+                    <p className="font-semibold text-[var(--color-primary)]">
+                      {series.metadata.name}
+                    </p>
+                    <p className="text-sm text-[var(--text-light)]/60">
+                      /{series.metadata.slug}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[var(--text-light)]/60">
+                      <span>{series.posts.length} posts</span>
+                      <span>{series.metadata.date}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </aside>
+
+        <div className="grid gap-4">
+          {(seriesError || seriesSuccess) && (
+            <div
+              className={`rounded-xl border px-4 py-3 ${
+                seriesError
+                  ? "border-red-400/35 bg-red-500/10 text-red-200"
+                  : "border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+              }`}
+            >
+              {seriesError || seriesSuccess}
             </div>
           )}
 
           <form
-            onSubmit={handleEntrySubmit}
-            className="grid gap-4 border-t border-[var(--color-secondary)]/20 pt-4"
+            onSubmit={handleSeriesSubmit}
+            className={`${mobilePanel === "details" ? "block" : "hidden"} space-y-5 rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5 lg:block`}
           >
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-                {selectedEntrySlug ? "Edit Series Post" : "Create Series Post"}
-              </h4>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => inlineImageInputRef.current?.click()}
-                  disabled={uploadingInlineImage || !selectedSeriesSlug}
-                  className="px-3 py-1 border border-[var(--color-secondary)]/40 bg-black/35 rounded cursor-pointer disabled:opacity-50"
-                >
-                  {uploadingInlineImage ? "Uploading..." : "Insert Photo"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEntryPreview((prev) => !prev)}
-                  className="px-3 py-1 bg-[var(--color-primary)] text-[var(--text-color-dark)] rounded font-medium cursor-pointer"
-                >
-                  {entryPreview ? "Edit" : "Preview"}
-                </button>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-[var(--color-primary)]">
+                  {selectedSeriesSlug ? "Edit Series" : "Create Series"}
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm text-[var(--text-light)]/60">
+                  Series can render as one long page or as individual post pages.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20 px-3 py-2 text-right">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
+                  Posts
+                </p>
+                <p className="text-lg font-semibold text-[var(--color-primary)]">
+                  {currentSeries?.posts.length ?? 0}
+                </p>
               </div>
             </div>
 
-            <input
-              type="file"
-              ref={inlineImageInputRef}
-              onChange={handleInlineImageUpload}
-              accept="image/*"
-              multiple
-              className="hidden"
-            />
-
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Title
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Series Name
                 </label>
                 <input
                   type="text"
-                  value={entryForm.title}
+                  value={seriesForm.name}
                   onChange={(event) => {
-                    const title = event.target.value;
-                    setEntryForm((prev) => ({
-                      ...prev,
-                      title,
+                    const name = event.target.value;
+                    setSeriesForm((previous) => ({
+                      ...previous,
+                      name,
                       slug:
-                        !selectedEntrySlug ||
-                        prev.slug === generateSlug(prev.title)
-                          ? generateSlug(title)
-                          : prev.slug,
+                        !selectedSeriesSlug ||
+                        previous.slug === generateSlug(previous.name)
+                          ? generateSlug(name)
+                          : previous.slug,
                     }));
                   }}
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
+                  className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
                   required
-                  disabled={!selectedSeriesSlug}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                   Slug
                 </label>
                 <input
                   type="text"
-                  value={entryForm.slug}
+                  value={seriesForm.slug}
                   onChange={(event) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
+                    setSeriesForm((previous) => ({
+                      ...previous,
                       slug: event.target.value,
                     }))
                   }
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
+                  className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
                   required
-                  disabled={!selectedSeriesSlug}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Description
+                </label>
+                <textarea
+                  value={seriesForm.description}
+                  onChange={(event) =>
+                    setSeriesForm((previous) => ({
+                      ...previous,
+                      description: event.target.value,
+                    }))
+                  }
+                  className="min-h-32 w-full resize-y rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Date
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Start Date
                 </label>
                 <input
                   type="date"
-                  value={entryForm.date}
+                  value={seriesForm.date}
                   onChange={(event) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
+                    setSeriesForm((previous) => ({
+                      ...previous,
                       date: event.target.value,
                     }))
                   }
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
+                  className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
                   required
-                  disabled={!selectedSeriesSlug}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Author
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Series Layout
                 </label>
-                <input
-                  type="text"
-                  value={entryForm.author}
-                  onChange={(event) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
-                      author: event.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                  disabled={!selectedSeriesSlug}
-                />
+                <label className="flex min-h-14 items-center gap-3 rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={seriesForm.individualPages}
+                    onChange={(event) =>
+                      setSeriesForm((previous) => ({
+                        ...previous,
+                        individualPages: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>Use individual pages for each series post</span>
+                </label>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Cover Image
+            <section className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20 p-4">
+              <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                Series Cover Image
               </label>
-              <input
-                type="file"
-                ref={entryCoverInputRef}
-                onChange={handleEntryImageUpload}
-                accept="image/*"
-                disabled={uploadingEntryImage || !selectedSeriesSlug}
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
-              />
-              <p className="text-sm text-[var(--text-light)]/60 mt-2">
-                {uploadingEntryImage
-                  ? "Uploading cover image..."
-                  : "Optional cover image for individual post pages."}
-              </p>
-              {entryForm.image && (
-                <img
-                  src={entryForm.image}
-                  alt="Series post cover preview"
-                  className="mt-4 max-h-48 rounded border border-[var(--color-secondary)]/40"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Markdown Content
-              </label>
-              {!entryPreview ? (
-                <textarea
-                  ref={entryTextAreaRef}
-                  value={entryForm.markdown}
-                  onChange={(event) =>
-                    setEntryForm((prev) => ({
-                      ...prev,
-                      markdown: event.target.value,
-                    }))
-                  }
-                  className="w-full min-h-80 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg font-mono text-sm resize-y"
-                  required
-                  disabled={!selectedSeriesSlug}
-                />
-              ) : (
-                <div className="min-h-80 px-4 py-3 border border-[var(--color-secondary)]/40 bg-black/40 rounded-lg overflow-auto leading-7">
-                  <MarkdownRenderer content={entryForm.markdown} />
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                <div>
+                  <input
+                    type="file"
+                    ref={seriesCoverInputRef}
+                    onChange={handleSeriesImageUpload}
+                    accept="image/*"
+                    disabled={uploadingSeriesImage}
+                    className="w-full cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                  />
+                  <p className="mt-2 text-sm text-[var(--text-light)]/60">
+                    {uploadingSeriesImage
+                      ? "Uploading series image..."
+                      : "Upload a thumbnail or banner image for the series."}
+                  </p>
                 </div>
-              )}
-            </div>
+                <div className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/25 p-3">
+                  <p className="text-sm font-medium text-[var(--color-secondary)]">
+                    Preview
+                  </p>
+                  {seriesForm.image ? (
+                    <img
+                      src={seriesForm.image}
+                      alt="Series cover preview"
+                      className="mt-3 max-h-64 w-full rounded-xl border border-[var(--color-secondary)]/40 object-cover"
+                    />
+                  ) : (
+                    <p className="mt-3 text-sm text-[var(--text-light)]/50">
+                      No cover image selected yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </section>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
               <button
                 type="submit"
-                disabled={entrySubmitting || !selectedSeriesSlug}
-                className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-50"
+                disabled={seriesSubmitting}
+                className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-3 font-semibold text-[var(--text-color-dark)] disabled:opacity-60"
               >
-                {entrySubmitting
+                {seriesSubmitting
                   ? "Saving..."
-                  : selectedEntrySlug
-                    ? "Save Series Post"
-                    : "Create Series Post"}
+                  : selectedSeriesSlug
+                    ? "Save Series"
+                    : "Create Series"}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  const matchedPost = currentSeries?.posts.find(
-                    (post) => post.slug === selectedEntrySlug,
-                  );
-                  if (matchedPost) {
-                    selectEntry(matchedPost);
+                  if (currentSeries) {
+                    selectSeries(currentSeries);
                   } else {
-                    startNewEntry();
+                    startNewSeries();
                   }
                 }}
-                className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
+                className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-5 py-3"
               >
-                {selectedEntrySlug ? "Reset" : "Clear"}
+                {selectedSeriesSlug ? "Reset" : "Clear"}
               </button>
-              {selectedEntrySlug && (
+              {selectedSeriesSlug && (
                 <button
                   type="button"
-                  onClick={handleEntryDelete}
-                  disabled={entryDeleting}
-                  className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
+                  onClick={handleSeriesDelete}
+                  disabled={seriesDeleting}
+                  className="cursor-pointer rounded-xl border border-red-400/50 bg-red-500/15 px-5 py-3 text-red-200 disabled:opacity-60"
                 >
-                  {entryDeleting ? "Deleting..." : "Delete Series Post"}
+                  {seriesDeleting ? "Deleting..." : "Delete Series"}
                 </button>
               )}
             </div>
           </form>
+
+          <section
+            className={`${mobilePanel === "posts" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 lg:block`}
+          >
+            <div className="flex flex-col gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-4 md:px-5 md:py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-[var(--color-primary)]">
+                    Series Posts
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                    {selectedSeriesSlug
+                      ? `Managing posts in /${selectedSeriesSlug}`
+                      : "Save a series before adding posts."}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-[var(--color-secondary)]/25 px-3 py-1 text-xs text-[var(--text-light)]/70">
+                    {sortedPosts.length} visible
+                  </span>
+                  <button
+                    type="button"
+                    onClick={startNewEntry}
+                    disabled={!selectedSeriesSlug && !seriesForm.slug}
+                    className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-4 py-2.5 font-semibold text-[var(--text-color-dark)] disabled:opacity-50"
+                  >
+                    New Series Post
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 lg:hidden">
+                {(
+                  [
+                    ["list", "Browse posts"],
+                    ["editor", selectedEntrySlug ? "Edit post" : "New draft"],
+                  ] as Array<[SeriesPostsMobileView, string]>
+                ).map(([key, label]) => {
+                  const isActive = mobilePostsView === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setMobilePostsView(key)}
+                      className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        isActive
+                          ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                          : "border border-[var(--color-secondary)]/20 bg-black/20 text-[var(--text-light)]/70"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 md:p-5">
+              <div className={`${mobilePostsView === "list" ? "block" : "hidden"} space-y-3 lg:block`}>
+                {selectedSeriesSlug ? (
+                  sortedPosts.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {sortedPosts.map((post) => {
+                        const isActive = post.slug === selectedEntrySlug;
+                        return (
+                          <button
+                            key={post.slug}
+                            type="button"
+                            onClick={() => selectEntry(post)}
+                            className={`rounded-2xl border px-4 py-3 text-left transition ${
+                              isActive
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                                : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-[var(--color-primary)]">
+                                  {post.title}
+                                </p>
+                                <p className="truncate text-sm text-[var(--text-light)]/60">
+                                  /{post.slug}
+                                </p>
+                              </div>
+                              <span className="rounded-full border border-[var(--color-secondary)]/25 px-2 py-1 text-xs text-[var(--text-light)]/65">
+                                {post.date}
+                              </span>
+                            </div>
+                            <p className="mt-3 text-sm text-[var(--text-light)]/55">
+                              {post.author || "Guest"}
+                            </p>
+                            <p className="mt-3 text-sm text-[var(--color-secondary)]">
+                              Tap to edit in the post panel.
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+                      No posts in this series yet.
+                    </div>
+                  )
+                ) : (
+                  <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+                    Create or save a series first to start adding posts.
+                  </div>
+                )}
+              </div>
+
+              <form
+                onSubmit={handleEntrySubmit}
+                className={`${mobilePostsView === "editor" ? "block" : "hidden"} space-y-5 border-t border-[var(--color-secondary)]/20 pt-4 lg:block`}
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      {selectedEntrySlug ? "Edit Series Post" : "Create Series Post"}
+                    </h4>
+                    <p className="mt-1 text-sm text-[var(--text-light)]/55">
+                      Mobile keeps browsing and editing as separate surfaces; desktop shows both together.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 md:flex md:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => inlineImageInputRef.current?.click()}
+                      disabled={uploadingInlineImage || !selectedSeriesSlug}
+                      className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 text-sm disabled:opacity-50"
+                    >
+                      {uploadingInlineImage ? "Uploading..." : "Insert Photo"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEntryPreview((previous) => !previous)}
+                      className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-[var(--text-color-dark)]"
+                    >
+                      {entryPreview ? "Return to Editor" : "Preview Content"}
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  ref={inlineImageInputRef}
+                  onChange={handleInlineImageUpload}
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                />
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={entryForm.title}
+                      onChange={(event) => {
+                        const title = event.target.value;
+                        setEntryForm((previous) => ({
+                          ...previous,
+                          title,
+                          slug:
+                            !selectedEntrySlug ||
+                            previous.slug === generateSlug(previous.title)
+                              ? generateSlug(title)
+                              : previous.slug,
+                        }));
+                      }}
+                      className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                      required
+                      disabled={!selectedSeriesSlug}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Slug
+                    </label>
+                    <input
+                      type="text"
+                      value={entryForm.slug}
+                      onChange={(event) =>
+                        setEntryForm((previous) => ({
+                          ...previous,
+                          slug: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                      required
+                      disabled={!selectedSeriesSlug}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={entryForm.date}
+                      onChange={(event) =>
+                        setEntryForm((previous) => ({
+                          ...previous,
+                          date: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                      required
+                      disabled={!selectedSeriesSlug}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Author
+                    </label>
+                    <input
+                      type="text"
+                      value={entryForm.author}
+                      onChange={(event) =>
+                        setEntryForm((previous) => ({
+                          ...previous,
+                          author: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                      disabled={!selectedSeriesSlug}
+                    />
+                  </div>
+                </div>
+
+                <section className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20 p-4">
+                  <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                    Cover Image
+                  </label>
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div>
+                      <input
+                        type="file"
+                        ref={entryCoverInputRef}
+                        onChange={handleEntryImageUpload}
+                        accept="image/*"
+                        disabled={uploadingEntryImage || !selectedSeriesSlug}
+                        className="w-full cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
+                      />
+                      <p className="mt-2 text-sm text-[var(--text-light)]/60">
+                        {uploadingEntryImage
+                          ? "Uploading cover image..."
+                          : "Optional cover image for individual post pages."}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/25 p-3">
+                      <p className="text-sm font-medium text-[var(--color-secondary)]">
+                        Preview
+                      </p>
+                      {entryForm.image ? (
+                        <img
+                          src={entryForm.image}
+                          alt="Series post cover preview"
+                          className="mt-3 max-h-64 w-full rounded-xl border border-[var(--color-secondary)]/40 object-cover"
+                        />
+                      ) : (
+                        <p className="mt-3 text-sm text-[var(--text-light)]/50">
+                          No cover image selected yet.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20">
+                  <div className="border-b border-[var(--color-secondary)]/15 px-4 py-3">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Markdown Content
+                    </label>
+                  </div>
+                  <div className="p-4">
+                    {!entryPreview ? (
+                      <textarea
+                        ref={entryTextAreaRef}
+                        value={entryForm.markdown}
+                        onChange={(event) =>
+                          setEntryForm((previous) => ({
+                            ...previous,
+                            markdown: event.target.value,
+                          }))
+                        }
+                        className="min-h-[18rem] w-full resize-y rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 font-mono text-sm md:min-h-[24rem]"
+                        required
+                        disabled={!selectedSeriesSlug}
+                      />
+                    ) : (
+                      <div className="min-h-[18rem] overflow-auto rounded-xl border border-[var(--color-secondary)]/40 bg-black/40 px-4 py-4 leading-7 md:min-h-[24rem]">
+                        <MarkdownRenderer content={entryForm.markdown} />
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <div className="space-y-4 border-t border-[var(--color-secondary)]/15 pt-4">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
+                    <button
+                      type="submit"
+                      disabled={entrySubmitting || !selectedSeriesSlug}
+                      className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-3 font-semibold text-[var(--text-color-dark)] disabled:opacity-50"
+                    >
+                      {entrySubmitting
+                        ? "Saving..."
+                        : selectedEntrySlug
+                          ? "Save Series Post"
+                          : "Create Series Post"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetEntryForm}
+                      className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-5 py-3"
+                    >
+                      {selectedEntrySlug ? "Reset" : "Clear"}
+                    </button>
+                  </div>
+
+                  {selectedEntrySlug && (
+                    <div className="rounded-2xl border border-red-400/30 bg-red-500/8 p-3">
+                      <p className="text-sm text-red-100/85">
+                        Keep destructive actions separate from save actions on smaller screens.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleEntryDelete}
+                        disabled={entryDeleting}
+                        className="mt-3 w-full cursor-pointer rounded-xl border border-red-400/50 bg-red-500/15 px-5 py-3 text-red-200 disabled:opacity-60 sm:w-auto"
+                      >
+                        {entryDeleting ? "Deleting..." : "Delete Series Post"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
+          </section>
         </div>
       </div>
     </div>

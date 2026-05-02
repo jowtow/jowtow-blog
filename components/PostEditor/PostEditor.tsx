@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/auth";
 import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
@@ -38,26 +38,7 @@ export default function PostEditor({
   const markdownFileInputRef = useRef<HTMLInputElement>(null);
   const markdownTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Get token from Netlify Identity
-    const getToken = () => {
-      const netlifyIdentity = (window as any).netlifyIdentity;
-      if (netlifyIdentity?.currentUser?.()) {
-        try {
-          const token = netlifyIdentity.currentUser().token.access_token;
-          setAuthToken(token);
-        } catch (error) {
-          console.error("Failed to get token:", error);
-        }
-      }
-    };
-
-    getToken();
-  }, [user]);
-
   const [formData, setFormData] = useState(emptyFormData);
-
   const [preview, setPreview] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingMarkdownImage, setUploadingMarkdownImage] = useState(false);
@@ -70,6 +51,22 @@ export default function PostEditor({
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1") &&
     process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== "false";
+
+  useEffect(() => {
+    const getToken = () => {
+      const netlifyIdentity = (window as any).netlifyIdentity;
+      if (netlifyIdentity?.currentUser?.()) {
+        try {
+          const token = netlifyIdentity.currentUser().token.access_token;
+          setAuthToken(token);
+        } catch (tokenError) {
+          console.error("Failed to get token:", tokenError);
+        }
+      }
+    };
+
+    getToken();
+  }, [user]);
 
   const getAuthHeaders = (): Record<string, string> => {
     if (authToken) {
@@ -104,11 +101,12 @@ export default function PostEditor({
   }, [initialPost, mode]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = event.target;
+    setFormData((previous) => ({ ...previous, [name]: value }));
     setError(null);
+    setSuccess(false);
   };
 
   const generateSlug = (title: string) => {
@@ -120,11 +118,14 @@ export default function PostEditor({
       .replace(/-+/g, "-");
   };
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const title = e.target.value;
-    handleInputChange(e);
+  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const title = event.target.value;
+    handleInputChange(event);
     if (!formData.slug || formData.slug === generateSlug(formData.title)) {
-      setFormData((prev) => ({ ...prev, slug: generateSlug(title) }));
+      setFormData((previous) => ({
+        ...previous,
+        slug: generateSlug(title),
+      }));
     }
   };
 
@@ -154,9 +155,9 @@ export default function PostEditor({
   };
 
   const handleCoverImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = e.target.files?.[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     setUploadingCover(true);
@@ -164,10 +165,14 @@ export default function PostEditor({
 
     try {
       const url = await uploadImageFile(file);
-      setFormData((prev) => ({ ...prev, image: url }));
+      setFormData((previous) => ({ ...previous, image: url }));
       setSuccess(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload image");
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Failed to upload image",
+      );
     } finally {
       setUploadingCover(false);
       if (coverFileInputRef.current) coverFileInputRef.current.value = "";
@@ -178,9 +183,9 @@ export default function PostEditor({
     const textarea = markdownTextAreaRef.current;
 
     if (!textarea) {
-      setFormData((prev) => ({
-        ...prev,
-        markdown: `${prev.markdown}${insertion}`,
+      setFormData((previous) => ({
+        ...previous,
+        markdown: `${previous.markdown}${insertion}`,
       }));
       return;
     }
@@ -192,7 +197,7 @@ export default function PostEditor({
       insertion +
       formData.markdown.slice(end);
 
-    setFormData((prev) => ({ ...prev, markdown: nextValue }));
+    setFormData((previous) => ({ ...previous, markdown: nextValue }));
     setSuccess(false);
 
     requestAnimationFrame(() => {
@@ -203,9 +208,9 @@ export default function PostEditor({
   };
 
   const handleMarkdownImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const files = Array.from(e.target.files ?? []);
+    const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
 
     setUploadingMarkdownImage(true);
@@ -221,20 +226,24 @@ export default function PostEditor({
           return `![${altText}](${url})`;
         }),
       );
-      // Join multiple images on adjacent lines so they render as a photo row
-      const markdownSnippet = `\n${snippets.join("\n")}\n`;
-      insertAtCursor(markdownSnippet);
+      insertAtCursor(`\n${snippets.join("\n")}\n`);
       setSuccess(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload image");
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Failed to upload image",
+      );
     } finally {
       setUploadingMarkdownImage(false);
-      if (markdownFileInputRef.current) markdownFileInputRef.current.value = "";
+      if (markdownFileInputRef.current) {
+        markdownFileInputRef.current.value = "";
+      }
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSubmitting(true);
     setError(null);
 
@@ -281,8 +290,10 @@ export default function PostEditor({
       onSuccess?.();
 
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "An error occurred",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -325,145 +336,179 @@ export default function PostEditor({
 
       setSuccess(false);
       onDelete?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete post");
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete post",
+      );
     } finally {
       setDeleting(false);
     }
   };
 
+  const resetForm = () => {
+    setFormData(
+      initialPost
+        ? {
+            title: initialPost.title,
+            slug: initialPost.slug,
+            markdown: initialPost.markdown,
+            image: initialPost.image || "",
+          }
+        : emptyFormData,
+    );
+    setPreview(false);
+    setError(null);
+    setSuccess(false);
+  };
+
   return (
-    <div className="mx-auto max-w-4xl py-2 text-[var(--text-light)] md:py-3">
-      <div className="mb-4">
-        <h2 className="mb-2 text-xl font-bold text-[var(--color-primary)] md:text-2xl">
+    <div className="mx-auto max-w-5xl py-2 text-[var(--text-light)] md:py-3">
+      <div className="mb-4 flex flex-col gap-2 md:mb-5">
+        <h2 className="text-xl font-bold text-[var(--color-primary)] md:text-2xl">
           {mode === "edit" ? "Edit Post" : "Create New Post"}
         </h2>
-        <p className="text-[var(--text-light)]/70">
+        <p className="max-w-2xl text-sm leading-6 text-[var(--text-light)]/70">
           {mode === "edit"
-            ? "Update or remove an existing dynamic post."
-            : "Write and preview posts with inline markdown images."}
+            ? "Update or remove an existing dynamic post. Mobile actions are stacked for safer editing on the go."
+            : "Write and preview posts with inline markdown images. Desktop keeps the roomy editor while mobile trims the chrome."}
         </p>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-500/10 border border-red-400/40 rounded text-red-200">
+        <div className="mb-4 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-red-200">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/40 rounded text-[var(--color-primary)]">
-          ✓{" "}
-          {mode === "edit"
-            ? "Post updated successfully!"
-            : "Post created successfully!"}
+        <div className="mb-4 rounded-xl border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-4 py-3 text-[var(--color-primary)]">
+          ✓ {mode === "edit" ? "Post updated successfully!" : "Post created successfully!"}
         </div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
+        className="space-y-6 rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
       >
-        {/* Title */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-            Title <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleTitleChange}
-            placeholder="Enter post title"
-            className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
-            required
-          />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleTitleChange}
+              placeholder="Enter post title"
+              className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+              Slug <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="slug"
+              value={formData.slug}
+              onChange={handleInputChange}
+              placeholder="post-slug"
+              className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
+              required
+            />
+            <p className="mt-1 text-sm text-[var(--text-light)]/60">
+              Auto-generated from title, but you can customize it.
+            </p>
+          </div>
         </div>
 
-        {/* Slug */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-            Slug <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="slug"
-            value={formData.slug}
-            onChange={handleInputChange}
-            placeholder="post-slug"
-            className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
-            required
-          />
-          <p className="text-sm text-[var(--text-light)]/60 mt-1">
-            Auto-generated from title, but you can customize it
-          </p>
-        </div>
+        <section className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20 p-4">
+          <div className="mb-4 flex flex-col gap-1">
+            <label className="text-sm font-medium text-[var(--color-secondary)]">
+              Cover Image
+            </label>
+            <p className="text-sm text-[var(--text-light)]/60">
+              Keep uploads and preview together so mobile editors do not lose context.
+            </p>
+          </div>
 
-        {/* Featured Image */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-            Cover Image
-          </label>
-          <div className="flex gap-4 items-start">
-            <div className="flex-1">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div>
               <input
                 type="file"
                 ref={coverFileInputRef}
                 onChange={handleCoverImageUpload}
                 accept="image/*"
                 disabled={uploadingCover}
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
+                className="w-full cursor-pointer rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
               />
-              <p className="text-sm text-[var(--text-light)]/60 mt-1">
+              <p className="mt-2 text-sm text-[var(--text-light)]/60">
                 {uploadingCover
                   ? "Uploading cover image..."
-                  : "Select an image to upload (max 5MB)"}
+                  : "Select an image to upload (max 5MB)."}
               </p>
             </div>
-          </div>
-          {formData.image && (
-            <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Preview:</p>
-              <img
-                src={formData.image}
-                alt="Cover preview"
-                className="max-w-xs h-auto rounded border border-[var(--color-secondary)]/50"
-              />
-              <button
-                type="button"
-                onClick={() => setFormData((prev) => ({ ...prev, image: "" }))}
-                className="text-sm text-red-300 hover:text-red-200 mt-2 cursor-pointer"
-              >
-                Remove image
-              </button>
-            </div>
-          )}
-        </div>
 
-        {/* Markdown Editor */}
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-[var(--color-secondary)]">
-              Content <span className="text-red-500">*</span>
-            </label>
-            <div className="flex items-center gap-2">
+            <div className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/25 p-3">
+              <p className="text-sm font-medium text-[var(--color-secondary)]">Preview</p>
+              {formData.image ? (
+                <>
+                  <img
+                    src={formData.image}
+                    alt="Cover preview"
+                    className="mt-3 max-h-64 w-full rounded-xl border border-[var(--color-secondary)]/40 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData((previous) => ({ ...previous, image: "" }))}
+                    className="mt-3 cursor-pointer text-sm text-red-300 transition hover:text-red-200"
+                  >
+                    Remove image
+                  </button>
+                </>
+              ) : (
+                <p className="mt-3 text-sm text-[var(--text-light)]/50">
+                  No cover image selected yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--color-secondary)]/20 bg-black/20">
+          <div className="flex flex-col gap-3 border-b border-[var(--color-secondary)]/15 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Content <span className="text-red-500">*</span>
+              </label>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                Supports GitHub Flavored Markdown.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 md:flex md:flex-wrap">
               <button
                 type="button"
                 onClick={() => markdownFileInputRef.current?.click()}
                 disabled={uploadingMarkdownImage}
-                className="text-sm px-3 py-1 border border-[var(--color-secondary)]/50 bg-black/35 hover:bg-black/55 rounded cursor-pointer transition disabled:opacity-60"
+                className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/50 bg-black/35 px-4 py-3 text-sm transition hover:bg-black/55 disabled:opacity-60"
               >
                 {uploadingMarkdownImage ? "Uploading..." : "Insert Photo"}
               </button>
               <button
                 type="button"
-                onClick={() => setPreview(!preview)}
-                className="text-sm px-3 py-1 bg-[var(--color-primary)] text-[var(--text-color-dark)] hover:brightness-95 rounded font-medium cursor-pointer"
+                onClick={() => setPreview((previous) => !previous)}
+                className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-[var(--text-color-dark)] transition hover:brightness-95"
               >
-                {preview ? "Edit" : "Preview"}
+                {preview ? "Return to Editor" : "Preview Content"}
               </button>
             </div>
           </div>
+
           <input
             type="file"
             ref={markdownFileInputRef}
@@ -474,79 +519,76 @@ export default function PostEditor({
             className="hidden"
           />
 
-          {!preview ? (
-            <textarea
-              ref={markdownTextAreaRef}
-              name="markdown"
-              value={formData.markdown}
-              onChange={handleInputChange}
-              placeholder="# Heading&#10;&#10;Write your post in **Markdown** format..."
-              className="h-80 w-full resize-vertical rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60 md:h-96"
-              required
-            />
-          ) : (
-            <div className="min-h-80 w-full overflow-auto rounded-lg border border-[var(--color-secondary)]/40 bg-black/40 px-4 py-3 leading-7 md:min-h-96">
-              <MarkdownRenderer content={formData.markdown} />
-            </div>
-          )}
+          <div className="p-4">
+            {!preview ? (
+              <textarea
+                ref={markdownTextAreaRef}
+                name="markdown"
+                value={formData.markdown}
+                onChange={handleInputChange}
+                placeholder="# Heading&#10;&#10;Write your post in **Markdown** format..."
+                className="min-h-[18rem] w-full resize-y rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60 md:min-h-[24rem] lg:min-h-[34rem]"
+                required
+              />
+            ) : (
+              <div className="min-h-[18rem] overflow-auto rounded-xl border border-[var(--color-secondary)]/40 bg-black/40 px-4 py-4 leading-7 md:min-h-[24rem] lg:min-h-[34rem]">
+                <MarkdownRenderer content={formData.markdown} />
+              </div>
+            )}
 
-          <p className="text-sm text-[var(--text-light)]/60 mt-2">
-            Supports GitHub Flavored Markdown. Use the Insert Photo button to
-            upload and inject image markdown at the cursor.
-          </p>
-        </div>
+            <p className="mt-3 text-sm text-[var(--text-light)]/60">
+              Use Insert Photo to upload images and inject markdown at the cursor.
+            </p>
+          </div>
+        </section>
 
-        {/* Submit Button */}
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="cursor-pointer rounded-lg bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95 disabled:opacity-60"
-          >
-            {submitting
-              ? mode === "edit"
-                ? "Saving..."
-                : "Creating..."
-              : mode === "edit"
-                ? "Save Changes"
-                : "Create Post"}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setFormData(
-                initialPost
-                  ? {
-                      title: initialPost.title,
-                      slug: initialPost.slug,
-                      markdown: initialPost.markdown,
-                      image: initialPost.image || "",
-                    }
-                  : emptyFormData,
-              )
-            }
-            className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-2 font-medium text-[var(--text-light)] transition hover:bg-black/50"
-          >
-            {mode === "edit" ? "Reset" : "Clear"}
-          </button>
+        <div className="space-y-4 border-t border-[var(--color-secondary)]/15 pt-4">
+          <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-3 font-semibold text-[var(--text-color-dark)] transition hover:brightness-95 disabled:opacity-60"
+            >
+              {submitting
+                ? mode === "edit"
+                  ? "Saving..."
+                  : "Creating..."
+                : mode === "edit"
+                  ? "Save Changes"
+                  : "Create Post"}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-3 font-medium text-[var(--text-light)] transition hover:bg-black/50"
+            >
+              {mode === "edit" ? "Reset Changes" : "Clear Draft"}
+            </button>
+            {mode === "edit" && onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-3 font-medium text-[var(--text-light)] transition hover:bg-black/50"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
           {mode === "edit" && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="cursor-pointer rounded-lg border border-red-400/50 bg-red-500/15 px-5 py-2 font-medium text-red-200 transition hover:bg-red-500/25 disabled:opacity-60"
-            >
-              {deleting ? "Deleting..." : "Delete Post"}
-            </button>
-          )}
-          {mode === "edit" && onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/50 bg-black/35 px-5 py-2 font-medium text-[var(--text-light)] transition hover:bg-black/50"
-            >
-              Cancel
-            </button>
+            <div className="rounded-2xl border border-red-400/30 bg-red-500/8 p-3">
+              <p className="text-sm text-red-100/85">
+                Destructive actions are separated from save controls on smaller screens.
+              </p>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="mt-3 w-full cursor-pointer rounded-xl border border-red-400/50 bg-red-500/15 px-5 py-3 font-medium text-red-200 transition hover:bg-red-500/25 disabled:opacity-60 sm:w-auto"
+              >
+                {deleting ? "Deleting..." : "Delete Post"}
+              </button>
+            </div>
           )}
         </div>
       </form>

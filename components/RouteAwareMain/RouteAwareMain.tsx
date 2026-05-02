@@ -25,7 +25,7 @@ export default function RouteAwareMain({ children }: RouteAwareMainProps) {
     <main
       className={
         isAdminRoute
-          ? "content w-full md:flex-1 md:min-h-0 md:h-[calc(100dvh-var(--admin-header-height)-var(--admin-footer-height))] md:overflow-hidden"
+          ? "content w-full min-h-[calc(100dvh-var(--admin-header-height)-var(--admin-footer-height))] md:flex-1 md:min-h-0 md:h-[calc(100dvh-var(--admin-header-height)-var(--admin-footer-height))] md:overflow-hidden"
           : "content mx-[10px] my-[10px] grow lg:mx-[20vw]"
       }
     >

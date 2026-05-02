@@ -27,6 +27,7 @@ type AdminCollection = {
 };
 
 type ItemEditorSurface = "edit" | "preview";
+type CollectionsMobilePanel = "collections" | "details" | "items";
 
 const getTodayString = () => new Date().toISOString().split("T")[0];
 
@@ -87,6 +88,7 @@ export default function CollectionsManager() {
   const [itemDeleting, setItemDeleting] = useState(false);
   const [itemEditorOpen, setItemEditorOpen] = useState(false);
   const [itemEditorSurface, setItemEditorSurface] = useState<ItemEditorSurface>("edit");
+  const [mobilePanel, setMobilePanel] = useState<CollectionsMobilePanel>("collections");
   const [uploadingCollectionImage, setUploadingCollectionImage] = useState(false);
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
@@ -139,6 +141,7 @@ export default function CollectionsManager() {
     setItemEditorSurface("edit");
     setError(null);
     setSuccess(null);
+    setMobilePanel("details");
   }, []);
 
   const startNewCollection = useCallback(() => {
@@ -150,6 +153,7 @@ export default function CollectionsManager() {
     setItemEditorSurface("edit");
     setError(null);
     setSuccess(null);
+    setMobilePanel("details");
   }, []);
 
   const selectItem = useCallback((item: AdminCollectionItem) => {
@@ -158,6 +162,7 @@ export default function CollectionsManager() {
     setItemEditorSurface("edit");
     setError(null);
     setSuccess(null);
+    setMobilePanel("items");
   }, []);
 
   const loadCollections = useCallback(
@@ -288,6 +293,7 @@ export default function CollectionsManager() {
     setItemEditorSurface("edit");
     setError(null);
     setSuccess(null);
+    setMobilePanel("items");
     return true;
   }, [selectedCollectionSlug]);
 
@@ -627,6 +633,45 @@ export default function CollectionsManager() {
 
   return (
     <div className="space-y-4 text-[var(--text-light)]">
+      <div className="rounded-2xl border border-[var(--color-secondary)]/25 bg-black/20 p-3 lg:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Collections workspace</p>
+            <p className="text-sm text-[var(--text-light)]/60">
+              Browse libraries, edit collection details, and manage items as separate mobile surfaces.
+            </p>
+          </div>
+          <span className="rounded-full border border-[var(--color-secondary)]/25 px-2.5 py-1 text-xs text-[var(--text-light)]/70">
+            {collectionsList.length} total
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["collections", "Collections"],
+              ["details", "Details"],
+              ["items", "Items"],
+            ] as Array<[CollectionsMobilePanel, string]>
+          ).map(([key, label]) => {
+            const isActive = mobilePanel === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMobilePanel(key)}
+                className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                    : "border border-[var(--color-secondary)]/20 bg-black/25 text-[var(--text-light)]/75"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {(error || success) && (
         <div
           className={`rounded-xl border px-4 py-3 ${
@@ -640,7 +685,7 @@ export default function CollectionsManager() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-[240px_minmax(320px,400px)_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4">
+        <aside className={`${mobilePanel === "collections" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4 xl:block`}>
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-[var(--color-primary)]">Collections</h2>
@@ -713,7 +758,7 @@ export default function CollectionsManager() {
 
         <form
           onSubmit={handleCollectionSubmit}
-          className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
+          className={`${mobilePanel === "details" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5 xl:block`}
         >
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
@@ -876,7 +921,7 @@ export default function CollectionsManager() {
           </div>
         </form>
 
-        <section className="rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25">
+        <section className={`${mobilePanel === "items" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 xl:block`}>
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:px-5 md:py-4">
             <div>
               <h3 className="text-xl font-semibold text-[var(--color-primary)]">Item Workspace</h3>
@@ -911,72 +956,147 @@ export default function CollectionsManager() {
               No items in this collection yet. Use <span className="text-[var(--color-primary)]">New Item</span> to add the first one.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[720px]">
-                <div className="grid grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 border-b border-[var(--color-secondary)]/15 px-5 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
-                  <span>Item</span>
-                  <span>Slug</span>
-                  <span>Date</span>
-                  <span>Status</span>
-                </div>
-                <div className="divide-y divide-[var(--color-secondary)]/12">
-                  {sortedItems.map((item) => {
-                    const isActive = item.slug === selectedItemSlug;
-                    const hasMarkdown = item.markdown.trim().length > 0;
+            <>
+              <div className="grid gap-3 px-4 py-4 md:hidden">
+                {sortedItems.map((item) => {
+                  const isActive = item.slug === selectedItemSlug;
+                  const hasMarkdown = item.markdown.trim().length > 0;
 
-                    return (
-                      <button
-                        key={item.slug}
-                        type="button"
-                        onClick={() => selectItem(item)}
-                        onDoubleClick={() => openItemEditor(item)}
-                        className={`grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 px-5 py-3 text-left transition ${
-                          isActive
-                            ? "bg-[var(--color-primary)]/10"
-                            : "hover:bg-white/4"
-                        }`}
-                        title="Double-click to open the fullscreen editor"
-                      >
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--color-secondary)]/20 bg-black/25">
-                            {item.image ? (
-                              <img
-                                src={item.image}
-                                alt={item.title}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-xs text-[var(--text-light)]/35">none</span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-[var(--color-primary)]">
-                              {item.title}
-                            </p>
-                            <p className="truncate text-sm text-[var(--text-light)]/55">
-                              {getItemSummary(item.markdown)}
-                            </p>
-                          </div>
+                  return (
+                    <article
+                      key={item.slug}
+                      className={`rounded-2xl border bg-black/20 p-4 transition ${
+                        isActive
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                          : "border-[var(--color-secondary)]/20"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--color-secondary)]/20 bg-black/25">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs text-[var(--text-light)]/35">none</span>
+                          )}
                         </div>
-                        <div className="self-center text-sm text-[var(--text-light)]/65">/{item.slug}</div>
-                        <div className="self-center text-sm text-[var(--text-light)]/65">{item.date}</div>
-                        <div className="self-center text-sm">
-                          <span
-                            className={`rounded-full border px-2 py-1 text-xs ${
-                              hasMarkdown
-                                ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
-                                : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
-                            }`}
-                          >
-                            {hasMarkdown ? "Ready" : "Draft"}
-                          </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[var(--color-primary)]">
+                                {item.title}
+                              </p>
+                              <p className="truncate text-sm text-[var(--text-light)]/60">
+                                /{item.slug}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs ${
+                                hasMarkdown
+                                  ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
+                                  : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
+                              }`}
+                            >
+                              {hasMarkdown ? "Ready" : "Draft"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-[var(--text-light)]/55">
+                            {getItemSummary(item.markdown)}
+                          </p>
+                          <p className="mt-2 text-xs text-[var(--text-light)]/55">{item.date}</p>
                         </div>
-                      </button>
-                    );
-                  })}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => selectItem(item)}
+                          className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/30 bg-black/25 px-3 py-3 text-sm"
+                        >
+                          Select
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openItemEditor(item)}
+                          className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-3 py-3 text-sm font-semibold text-[var(--text-color-dark)]"
+                        >
+                          Open Editor
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <div className="min-w-[720px]">
+                  <div className="grid grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 border-b border-[var(--color-secondary)]/15 px-5 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
+                    <span>Item</span>
+                    <span>Slug</span>
+                    <span>Date</span>
+                    <span>Status</span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-secondary)]/12">
+                    {sortedItems.map((item) => {
+                      const isActive = item.slug === selectedItemSlug;
+                      const hasMarkdown = item.markdown.trim().length > 0;
+
+                      return (
+                        <button
+                          key={item.slug}
+                          type="button"
+                          onClick={() => selectItem(item)}
+                          onDoubleClick={() => openItemEditor(item)}
+                          className={`grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 px-5 py-3 text-left transition ${
+                            isActive
+                              ? "bg-[var(--color-primary)]/10"
+                              : "hover:bg-white/4"
+                          }`}
+                          title="Double-click to open the fullscreen editor"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--color-secondary)]/20 bg-black/25">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs text-[var(--text-light)]/35">none</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[var(--color-primary)]">
+                                {item.title}
+                              </p>
+                              <p className="truncate text-sm text-[var(--text-light)]/55">
+                                {getItemSummary(item.markdown)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="self-center text-sm text-[var(--text-light)]/65">/{item.slug}</div>
+                          <div className="self-center text-sm text-[var(--text-light)]/65">{item.date}</div>
+                          <div className="self-center text-sm">
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs ${
+                                hasMarkdown
+                                  ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
+                                  : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
+                              }`}
+                            >
+                              {hasMarkdown ? "Ready" : "Draft"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </section>
       </div>
@@ -1005,8 +1125,8 @@ export default function CollectionsManager() {
               </button>
             </div>
 
-            <form onSubmit={handleItemSubmit} className="grid min-h-0 flex-1 gap-5 p-4 xl:grid-cols-[360px_minmax(0,1fr)] xl:p-5">
-              <section className="min-h-0 overflow-y-auto rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 p-4">
+            <form onSubmit={handleItemSubmit} className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4 xl:grid xl:gap-5 xl:overflow-hidden xl:p-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+              <section className="rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 p-4 xl:min-h-0 xl:overflow-y-auto">
                 <div className="grid gap-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
@@ -1137,7 +1257,7 @@ export default function CollectionsManager() {
                 </div>
               </section>
 
-              <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25">
+              <section className="mt-4 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 xl:mt-0">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-secondary)]/20 px-4 py-3">
                   <div>
                     <h4 className="font-semibold text-[var(--color-primary)]">Markdown Workspace</h4>
@@ -1146,7 +1266,7 @@ export default function CollectionsManager() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="flex rounded-lg border border-[var(--color-secondary)]/30 bg-black/25 p-1 lg:hidden">
+                    <div className="flex rounded-lg border border-[var(--color-secondary)]/30 bg-black/25 p-1 xl:hidden">
                       <button
                         type="button"
                         onClick={() => setItemEditorSurface("edit")}
@@ -1190,10 +1310,10 @@ export default function CollectionsManager() {
                   className="hidden"
                 />
 
-                <div className="grid min-h-0 flex-1 lg:grid-cols-2">
+                <div className="grid min-h-0 flex-1 xl:grid-cols-2">
                   <div
-                    className={`min-h-0 border-b border-[var(--color-secondary)]/15 lg:border-b-0 lg:border-r ${
-                      itemEditorSurface === "edit" ? "block" : "hidden lg:block"
+                    className={`min-h-0 border-b border-[var(--color-secondary)]/15 xl:border-b-0 xl:border-r ${
+                      itemEditorSurface === "edit" ? "block" : "hidden xl:block"
                     }`}
                   >
                     <div className="border-b border-[var(--color-secondary)]/10 px-4 py-2 text-xs uppercase tracking-[0.16em] text-[var(--color-secondary)]/65">
@@ -1216,7 +1336,7 @@ export default function CollectionsManager() {
                     </div>
                   </div>
 
-                  <div className={`${itemEditorSurface === "preview" ? "block" : "hidden lg:block"} min-h-0`}>
+                  <div className={`${itemEditorSurface === "preview" ? "block" : "hidden xl:block"} min-h-0`}>
                     <div className="border-b border-[var(--color-secondary)]/10 px-4 py-2 text-xs uppercase tracking-[0.16em] text-[var(--color-secondary)]/65">
                       Preview
                     </div>

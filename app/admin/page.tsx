@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import PostEditor from '@/components/PostEditor/PostEditor';
@@ -20,12 +20,12 @@ type AdminPost = {
 type AdminTabKey = 'dashboard' | 'create' | 'series' | 'collections' | 'images';
 type AdminLayoutMode = 'constrained' | 'wide';
 
-const tabs: Array<{ key: AdminTabKey; label: string; mode: AdminLayoutMode }> = [
-  { key: 'dashboard', label: 'Dashboard', mode: 'constrained' },
-  { key: 'create', label: 'Create', mode: 'constrained' },
-  { key: 'series', label: 'Series', mode: 'wide' },
-  { key: 'collections', label: 'Collections', mode: 'wide' },
-  { key: 'images', label: 'Images', mode: 'wide' },
+const tabs: Array<{ key: AdminTabKey; label: string; mode: AdminLayoutMode; shortLabel: string }> = [
+  { key: 'dashboard', label: 'Dashboard', shortLabel: 'Home', mode: 'constrained' },
+  { key: 'create', label: 'Create', shortLabel: 'Write', mode: 'constrained' },
+  { key: 'series', label: 'Series', shortLabel: 'Series', mode: 'wide' },
+  { key: 'collections', label: 'Collections', shortLabel: 'Collections', mode: 'wide' },
+  { key: 'images', label: 'Images', shortLabel: 'Images', mode: 'wide' },
 ];
 
 export default function AdminPage() {
@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [editingPost, setEditingPost] = useState<AdminPost | null>(null);
+  const tabRefs = useRef<Partial<Record<AdminTabKey, HTMLButtonElement | null>>>({});
 
   const activeTabConfig = useMemo(
     () => tabs.find((tab) => tab.key === activeTab) ?? tabs[0],
@@ -79,6 +80,14 @@ export default function AdminPage() {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    tabRefs.current[activeTab]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [activeTab]);
+
   if (isLoading) {
     return <div className="flex h-full min-h-[40vh] items-center justify-center text-[var(--text-light)]/75">Loading admin workspace...</div>;
   }
@@ -88,10 +97,10 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[1900px] flex-1 flex-col">
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/20 shadow-[0_20px_80px_rgba(0,0,0,0.32)]">
+    <div className="mx-auto flex min-h-full w-full max-w-[1900px] flex-1 flex-col md:h-full md:min-h-0">
+      <section className="flex flex-1 flex-col rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/20 shadow-[0_20px_80px_rgba(0,0,0,0.32)] md:min-h-0 md:overflow-hidden">
         <div className="shrink-0 border-b border-[var(--color-secondary)]/20 bg-black/25 px-4 py-3 md:px-5 md:py-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-secondary)]/70">Control panel</p>
               <h1 className="mt-1 text-xl font-semibold text-[var(--color-primary)] md:text-2xl">Admin workspace</h1>
@@ -99,19 +108,19 @@ export default function AdminPage() {
                 Signed in as {user?.user_metadata?.full_name || user?.email || 'admin'}.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:grid-cols-2 md:flex md:flex-wrap">
               <button
                 onClick={() => {
                   setEditingPost(null);
                   setActiveTab('create');
                 }}
-                className="cursor-pointer rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
+                className="cursor-pointer rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
               >
                 New post
               </button>
               <button
                 onClick={() => void loadPosts()}
-                className="cursor-pointer rounded-md border border-[var(--color-secondary)]/35 bg-black/30 px-3 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/45"
+                className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/35 bg-black/30 px-4 py-3 text-sm text-[var(--text-light)] transition hover:bg-black/45"
               >
                 Refresh posts
               </button>
@@ -119,40 +128,58 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="shrink-0 border-b border-[var(--color-secondary)]/20 bg-[var(--color-dark)]/92 px-3 py-2 backdrop-blur md:sticky md:top-0 md:z-20 md:px-4">
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => {
-              const isActive = tab.key === activeTab;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`min-w-[112px] rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[var(--color-primary)]/12 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/45'
-                      : 'text-[var(--text-light)]/70 hover:bg-white/5 hover:text-[var(--text-light)]'
-                  }`}
-                >
-                  {tab.key === 'create' && editingPost ? 'Edit Post' : tab.label}
-                </button>
-              );
-            })}
+        <div className="sticky top-2 z-20 shrink-0 border-b border-[var(--color-secondary)]/20 bg-[var(--color-dark)]/95 px-3 py-2 backdrop-blur md:top-0 md:px-4">
+          <div className="mb-2 flex items-center justify-between gap-3 md:hidden">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-secondary)]/65">Current tab</p>
+              <p className="text-sm font-medium text-[var(--color-primary)]">
+                {activeTab === 'create' && editingPost ? 'Edit Post' : activeTabConfig.label}
+              </p>
+            </div>
+            <span className="text-xs text-[var(--text-light)]/50">Swipe for more</span>
+          </div>
+          <div className="-mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-max gap-2 px-1 md:flex-wrap md:gap-2.5 md:px-0">
+              {tabs.map((tab) => {
+                const isActive = tab.key === activeTab;
+                return (
+                  <button
+                    key={tab.key}
+                    ref={(element) => {
+                      tabRefs.current[tab.key] = element;
+                    }}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex min-h-11 flex-none items-center rounded-xl border px-3.5 py-2 text-left text-sm font-medium transition-colors md:min-w-[124px] md:flex-1 md:justify-center ${
+                      isActive
+                        ? 'border-[var(--color-primary)]/45 bg-[var(--color-primary)]/12 text-[var(--color-primary)] shadow-[0_0_0_1px_rgba(127,255,0,0.12)]'
+                        : 'border-transparent text-[var(--text-light)]/72 hover:border-[var(--color-secondary)]/20 hover:bg-white/5 hover:text-[var(--text-light)]'
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <span className="md:hidden">{tab.shortLabel}</span>
+                    <span className="hidden md:inline">{tab.key === 'create' && editingPost ? 'Edit Post' : tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="flex-1 md:min-h-0 md:overflow-y-auto md:overscroll-contain">
           <div
             className={
               activeTabConfig.mode === 'wide'
-                ? 'w-full px-3 py-3 md:px-4 md:py-4'
-                : 'mx-auto w-full max-w-7xl px-3 py-3 md:px-4 md:py-4'
+                ? 'w-full px-3 py-4 md:px-4 md:py-4'
+                : 'mx-auto w-full max-w-7xl px-3 py-4 md:px-4 md:py-4'
             }
           >
             {activeTab === 'dashboard' && (
               <div className="grid gap-4">
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
                   <div className="rounded-xl border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/8 px-4 py-3">
-                    <p className="text-sm font-medium text-[var(--color-primary)]">Welcome back — the admin shell is locked to the viewport on larger screens.</p>
+                    <p className="text-sm font-medium text-[var(--color-primary)]">
+                      Desktop keeps the viewport-locked workspace shell. Mobile now falls back to natural page scrolling.
+                    </p>
                   </div>
                   <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-3 text-sm text-[var(--text-light)]/75">
                     <p><strong className="text-[var(--color-secondary)]">User:</strong> {user?.email}</p>
@@ -163,23 +190,23 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <div className="mb-3 flex items-center justify-between gap-4">
+                  <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <h2 className="text-lg font-semibold text-[var(--color-secondary)]">Manage existing posts</h2>
                     <span className="text-xs uppercase tracking-[0.18em] text-[var(--text-light)]/45">Dynamic posts</span>
                   </div>
 
                   {postsError && (
-                    <div className="mb-3 rounded-md border border-red-400/35 bg-red-500/10 px-4 py-3 text-red-200">
+                    <div className="mb-3 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-red-200">
                       {postsError}
                     </div>
                   )}
 
                   {postsLoading ? (
-                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
+                    <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
                       Loading posts...
                     </div>
                   ) : posts.length === 0 ? (
-                    <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
+                    <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-5 text-[var(--text-light)]/70">
                       No admin-created posts yet.
                     </div>
                   ) : (
@@ -187,7 +214,7 @@ export default function AdminPage() {
                       {posts.map((post) => (
                         <div
                           key={post.slug}
-                          className="flex flex-col gap-3 rounded-lg border border-[var(--color-secondary)]/22 bg-black/20 px-4 py-3 md:flex-row md:items-center md:justify-between"
+                          className="flex flex-col gap-3 rounded-xl border border-[var(--color-secondary)]/22 bg-black/20 px-4 py-3 md:flex-row md:items-center md:justify-between"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-base font-semibold text-[var(--color-primary)]">{post.title}</p>
@@ -197,19 +224,19 @@ export default function AdminPage() {
                               {post.author ? ` • ${post.author}` : ''}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="grid gap-2 sm:grid-cols-2 md:flex md:flex-wrap">
                             <button
                               onClick={() => {
                                 setEditingPost(post);
                                 setActiveTab('create');
                               }}
-                              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
+                              className="cursor-pointer rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--text-color-dark)] transition hover:brightness-95"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => window.open(`/post/${post.slug}`, '_blank', 'noopener,noreferrer')}
-                              className="cursor-pointer rounded-md border border-[var(--color-secondary)]/40 bg-black/25 px-3 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/40"
+                              className="cursor-pointer rounded-lg border border-[var(--color-secondary)]/40 bg-black/25 px-4 py-3 text-sm text-[var(--text-light)] transition hover:bg-black/40"
                             >
                               View
                             </button>
