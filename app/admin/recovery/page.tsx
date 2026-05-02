@@ -10,7 +10,13 @@ export default function RecoveryPage() {
 
   useEffect(() => {
     const hash = window.location.hash;
-    const netlifyIdentity = (window as any).netlifyIdentity;
+    const netlifyIdentity = (window as Window & {
+      netlifyIdentity?: {
+        on: (event: string, callback: (user: unknown) => void) => void;
+        init: () => void;
+        open: (view: string) => void;
+      };
+    }).netlifyIdentity;
 
     if (!netlifyIdentity) {
       setError('Netlify Identity not loaded');
@@ -18,47 +24,41 @@ export default function RecoveryPage() {
       return;
     }
 
-    // Check if there's a recovery token in the URL
     if (hash.includes('recovery_token')) {
-      // The widget should automatically detect the token
-      // This page just needs to exist and let the widget handle it
-      netlifyIdentity.on('login', (user: any) => {
-        // After recovery/password change, redirect to admin
+      netlifyIdentity.on('login', () => {
         setIsProcessing(false);
         router.push('/admin');
       });
 
       netlifyIdentity.init();
       netlifyIdentity.open('recovery');
-    } else {
-      setError('No recovery token found');
-      setIsProcessing(false);
+      return;
     }
+
+    setError('No recovery token found');
+    setIsProcessing(false);
   }, [router]);
 
   if (isProcessing) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-xl mb-4">Processing password recovery...</p>
-          <p className="text-gray-600">The Netlify Identity widget should open above.</p>
-        </div>
+      <div className="w-full max-w-lg rounded-[22px] border border-[var(--color-secondary)]/30 bg-black/25 px-6 py-8 text-center shadow-[0_20px_70px_rgba(0,0,0,0.32)]">
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]/70">Account recovery</p>
+        <p className="mt-3 text-lg text-[var(--text-light)]/80">Processing password recovery...</p>
+        <p className="mt-2 text-sm text-[var(--text-light)]/55">The Netlify Identity widget should open above.</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => router.push('/admin/login')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer"
-          >
-            Back to Login
-          </button>
-        </div>
+      <div className="w-full max-w-lg rounded-[22px] border border-red-400/30 bg-red-500/8 px-6 py-8 text-center shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+        <p className="text-sm text-red-200">{error}</p>
+        <button
+          onClick={() => router.push('/admin/login')}
+          className="mt-5 cursor-pointer rounded-md border border-[var(--color-secondary)]/35 bg-black/30 px-4 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/45"
+        >
+          Back to login
+        </button>
       </div>
     );
   }

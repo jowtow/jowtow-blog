@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/auth";
 import MarkdownRenderer from "@/components/MarkdownRenderer/MarkdownRenderer";
 
@@ -26,21 +26,49 @@ type AdminCollection = {
   items: AdminCollectionItem[];
 };
 
-const emptyCollectionForm: AdminCollectionMetadata = {
+type ItemEditorSurface = "edit" | "preview";
+type CollectionsMobilePanel = "collections" | "details" | "items";
+
+const getTodayString = () => new Date().toISOString().split("T")[0];
+
+const createEmptyCollectionForm = (): AdminCollectionMetadata => ({
   slug: "",
   name: "",
   description: "",
-  date: new Date().toISOString().split("T")[0],
+  date: getTodayString(),
   image: "",
-};
+});
 
-const emptyItemForm: AdminCollectionItem = {
-  collectionSlug: "",
+const createEmptyItemForm = (collectionSlug = ""): AdminCollectionItem => ({
+  collectionSlug,
   slug: "",
   title: "",
   markdown: "",
   image: "",
-  date: new Date().toISOString().split("T")[0],
+  date: getTodayString(),
+});
+
+const generateSlug = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+const getItemSummary = (markdown: string) => {
+  const plainText = markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[>#*_`~-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!plainText) {
+    return "No description yet.";
+  }
+
+  return plainText.length > 110 ? `${plainText.slice(0, 107)}...` : plainText;
 };
 
 export default function CollectionsManager() {
@@ -50,20 +78,18 @@ export default function CollectionsManager() {
   const [loadingCollections, setLoadingCollections] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<
-    string | null
-  >(null);
-  const [collectionForm, setCollectionForm] =
-    useState<AdminCollectionMetadata>(emptyCollectionForm);
+  const [selectedCollectionSlug, setSelectedCollectionSlug] = useState<string | null>(null);
+  const [collectionForm, setCollectionForm] = useState<AdminCollectionMetadata>(createEmptyCollectionForm);
   const [collectionSubmitting, setCollectionSubmitting] = useState(false);
   const [collectionDeleting, setCollectionDeleting] = useState(false);
-  const [itemForm, setItemForm] = useState<AdminCollectionItem>(emptyItemForm);
+  const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
+  const [itemForm, setItemForm] = useState<AdminCollectionItem>(createEmptyItemForm);
   const [itemSubmitting, setItemSubmitting] = useState(false);
   const [itemDeleting, setItemDeleting] = useState(false);
-  const [itemPreview, setItemPreview] = useState(false);
-  const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
-  const [uploadingCollectionImage, setUploadingCollectionImage] =
-    useState(false);
+  const [itemEditorOpen, setItemEditorOpen] = useState(false);
+  const [itemEditorSurface, setItemEditorSurface] = useState<ItemEditorSurface>("edit");
+  const [mobilePanel, setMobilePanel] = useState<CollectionsMobilePanel>("collections");
+  const [uploadingCollectionImage, setUploadingCollectionImage] = useState(false);
   const [uploadingItemImage, setUploadingItemImage] = useState(false);
   const [uploadingInlineImage, setUploadingInlineImage] = useState(false);
   const collectionCoverInputRef = useRef<HTMLInputElement>(null);
@@ -72,8 +98,7 @@ export default function CollectionsManager() {
   const itemTextAreaRef = useRef<HTMLTextAreaElement>(null);
   const isLocalBypassEnabled =
     typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1") &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
     process.env.NEXT_PUBLIC_DEV_ADMIN_BYPASS !== "false";
 
   const getAuthHeaders = (): Record<string, string> => {
@@ -88,19 +113,18 @@ export default function CollectionsManager() {
 
   useEffect(() => {
     const getToken = () => {
-      const netlifyIdentity = (
-        window as Window & {
-          netlifyIdentity?: {
-            currentUser?: () => { token: { access_token: string } };
-          };
-        }
-      ).netlifyIdentity;
+      const netlifyIdentity = (window as Window & {
+        netlifyIdentity?: {
+          currentUser?: () => { token: { access_token: string } };
+        };
+      }).netlifyIdentity;
+
       if (netlifyIdentity?.currentUser?.()) {
         try {
           const token = netlifyIdentity.currentUser().token.access_token;
           setAuthToken(token);
-        } catch (err) {
-          console.error("Failed to get token:", err);
+        } catch (tokenError) {
+          console.error("Failed to get token:", tokenError);
         }
       }
     };
@@ -108,60 +132,118 @@ export default function CollectionsManager() {
     getToken();
   }, [user]);
 
-  const loadCollections = async (preferredSlug?: string | null) => {
-    setLoadingCollections(true);
+  const selectCollection = useCallback((collection: AdminCollection) => {
+    setSelectedCollectionSlug(collection.metadata.slug);
+    setCollectionForm(collection.metadata);
+    setSelectedItemSlug(null);
+    setItemForm(createEmptyItemForm(collection.metadata.slug));
+    setItemEditorOpen(false);
+    setItemEditorSurface("edit");
     setError(null);
-
-    try {
-      const response = await fetch("/api/collections");
-      if (!response.ok) {
-        throw new Error("Failed to load collections");
-      }
-
-      const data = (await response.json()) as AdminCollection[];
-      const sorted = data.sort(
-        (a, b) => Date.parse(b.metadata.date) - Date.parse(a.metadata.date),
-      );
-
-      setCollectionsList(sorted);
-
-      const nextSlug = preferredSlug ?? selectedCollectionSlug;
-      if (!nextSlug) {
-        return;
-      }
-
-      const matched = sorted.find((c) => c.metadata.slug === nextSlug);
-      if (matched) {
-        selectCollection(matched);
-      } else {
-        startNewCollection();
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load collections",
-      );
-    } finally {
-      setLoadingCollections(false);
-    }
-  };
-
-  useEffect(() => {
-    loadCollections();
+    setSuccess(null);
+    setMobilePanel("details");
   }, []);
 
-  const generateSlug = (value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-");
+  const startNewCollection = useCallback(() => {
+    setSelectedCollectionSlug(null);
+    setCollectionForm(createEmptyCollectionForm());
+    setSelectedItemSlug(null);
+    setItemForm(createEmptyItemForm());
+    setItemEditorOpen(false);
+    setItemEditorSurface("edit");
+    setError(null);
+    setSuccess(null);
+    setMobilePanel("details");
+  }, []);
+
+  const selectItem = useCallback((item: AdminCollectionItem) => {
+    setSelectedItemSlug(item.slug);
+    setItemForm(item);
+    setItemEditorSurface("edit");
+    setError(null);
+    setSuccess(null);
+    setMobilePanel("items");
+  }, []);
+
+  const loadCollections = useCallback(
+    async ({
+      preferredSlug,
+      autoSelectFirst = false,
+    }: { preferredSlug?: string | null; autoSelectFirst?: boolean } = {}) => {
+      setLoadingCollections(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/collections");
+        if (!response.ok) {
+          throw new Error("Failed to load collections");
+        }
+
+        const data = (await response.json()) as AdminCollection[];
+        const sortedCollections = data.sort(
+          (a, b) => Date.parse(b.metadata.date) - Date.parse(a.metadata.date),
+        );
+
+        setCollectionsList(sortedCollections);
+
+        if (sortedCollections.length === 0) {
+          startNewCollection();
+          return;
+        }
+
+        if (preferredSlug) {
+          const matchedCollection =
+            sortedCollections.find((collection) => collection.metadata.slug === preferredSlug) ??
+            sortedCollections[0];
+          selectCollection(matchedCollection);
+          return;
+        }
+
+        if (autoSelectFirst) {
+          selectCollection(sortedCollections[0]);
+        }
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load collections",
+        );
+      } finally {
+        setLoadingCollections(false);
+      }
+    },
+    [selectCollection, startNewCollection],
+  );
+
+  useEffect(() => {
+    void loadCollections({ autoSelectFirst: true });
+  }, [loadCollections]);
+
+  useEffect(() => {
+    if (!itemEditorOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setItemEditorOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [itemEditorOpen]);
 
   const uploadImageFile = async (file: File) => {
     if (!authToken && !isLocalBypassEnabled) {
-      throw new Error(
-        "Authentication token not available. Please refresh the page.",
-      );
+      throw new Error("Authentication token not available. Please refresh the page.");
     }
 
     const formData = new FormData();
@@ -182,60 +264,59 @@ export default function CollectionsManager() {
     return data.url as string;
   };
 
-  const selectCollection = (collection: AdminCollection) => {
-    setSelectedCollectionSlug(collection.metadata.slug);
-    setCollectionForm(collection.metadata);
-    setSelectedItemSlug(null);
-    setItemForm({
-      ...emptyItemForm,
-      collectionSlug: collection.metadata.slug,
-    });
-    setItemPreview(false);
-    setError(null);
-    setSuccess(null);
-  };
+  const currentCollection = useMemo(
+    () =>
+      selectedCollectionSlug
+        ? collectionsList.find((collection) => collection.metadata.slug === selectedCollectionSlug) ?? null
+        : null,
+    [collectionsList, selectedCollectionSlug],
+  );
 
-  const startNewCollection = () => {
-    setSelectedCollectionSlug(null);
-    setCollectionForm(emptyCollectionForm);
-    setSelectedItemSlug(null);
-    setItemForm(emptyItemForm);
-    setItemPreview(false);
-    setError(null);
-    setSuccess(null);
-  };
+  const sortedItems = useMemo(() => {
+    if (!currentCollection) {
+      return [];
+    }
 
-  const startNewItem = () => {
-    if (!selectedCollectionSlug && !collectionForm.slug) {
+    return currentCollection.items
+      .slice()
+      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+  }, [currentCollection]);
+
+  const startNewItem = useCallback(() => {
+    if (!selectedCollectionSlug) {
       setError("Save the collection before adding items to it.");
-      return;
+      return false;
     }
 
     setSelectedItemSlug(null);
-    setItemForm({
-      ...emptyItemForm,
-      collectionSlug: selectedCollectionSlug || collectionForm.slug,
-    });
-    setItemPreview(false);
+    setItemForm(createEmptyItemForm(selectedCollectionSlug));
+    setItemEditorSurface("edit");
     setError(null);
     setSuccess(null);
+    setMobilePanel("items");
+    return true;
+  }, [selectedCollectionSlug]);
+
+  const openNewItemEditor = () => {
+    if (!startNewItem()) {
+      return;
+    }
+
+    setItemEditorOpen(true);
   };
 
-  const selectItem = (item: AdminCollectionItem) => {
-    setSelectedItemSlug(item.slug);
-    setItemForm(item);
-    setItemPreview(false);
-    setError(null);
-    setSuccess(null);
+  const openItemEditor = (item: AdminCollectionItem) => {
+    selectItem(item);
+    setItemEditorOpen(true);
   };
 
   const insertInlineImage = (insertion: string) => {
     const textarea = itemTextAreaRef.current;
 
     if (!textarea) {
-      setItemForm((prev) => ({
-        ...prev,
-        markdown: `${prev.markdown}${insertion}`,
+      setItemForm((previous) => ({
+        ...previous,
+        markdown: `${previous.markdown}${insertion}`,
       }));
       return;
     }
@@ -243,11 +324,9 @@ export default function CollectionsManager() {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const nextMarkdown =
-      itemForm.markdown.slice(0, start) +
-      insertion +
-      itemForm.markdown.slice(end);
+      itemForm.markdown.slice(0, start) + insertion + itemForm.markdown.slice(end);
 
-    setItemForm((prev) => ({ ...prev, markdown: nextMarkdown }));
+    setItemForm((previous) => ({ ...previous, markdown: nextMarkdown }));
 
     requestAnimationFrame(() => {
       textarea.focus();
@@ -256,52 +335,59 @@ export default function CollectionsManager() {
     });
   };
 
-  const handleCollectionImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleCollectionImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     setUploadingCollectionImage(true);
     setError(null);
 
     try {
       const url = await uploadImageFile(file);
-      setCollectionForm((prev) => ({ ...prev, image: url }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload image");
+      setCollectionForm((previous) => ({ ...previous, image: url }));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : "Failed to upload image",
+      );
     } finally {
       setUploadingCollectionImage(false);
-      if (collectionCoverInputRef.current)
+      if (collectionCoverInputRef.current) {
         collectionCoverInputRef.current.value = "";
+      }
     }
   };
 
-  const handleItemImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleItemImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     setUploadingItemImage(true);
     setError(null);
 
     try {
       const url = await uploadImageFile(file);
-      setItemForm((prev) => ({ ...prev, image: url }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload image");
+      setItemForm((previous) => ({ ...previous, image: url }));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : "Failed to upload image",
+      );
     } finally {
       setUploadingItemImage(false);
-      if (itemCoverInputRef.current) itemCoverInputRef.current.value = "";
+      if (itemCoverInputRef.current) {
+        itemCoverInputRef.current.value = "";
+      }
     }
   };
 
-  const handleInlineImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleInlineImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      return;
+    }
 
     setUploadingInlineImage(true);
     setError(null);
@@ -316,20 +402,19 @@ export default function CollectionsManager() {
           return `![${altText}](${url})`;
         }),
       );
+
       insertInlineImage(`\n${snippets.join("\n")}\n`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload image");
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error ? uploadError.message : "Failed to upload image",
+      );
     } finally {
       setUploadingInlineImage(false);
-      if (inlineImageInputRef.current) inlineImageInputRef.current.value = "";
+      if (inlineImageInputRef.current) {
+        inlineImageInputRef.current.value = "";
+      }
     }
   };
-
-  const currentCollection = selectedCollectionSlug
-    ? (collectionsList.find(
-        (c) => c.metadata.slug === selectedCollectionSlug,
-      ) ?? null)
-    : null;
 
   const handleCollectionSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -372,16 +457,16 @@ export default function CollectionsManager() {
 
       const payload = await response.json();
       const savedSlug = payload.data.slug as string;
+      setSelectedCollectionSlug(savedSlug);
+      await loadCollections({ preferredSlug: savedSlug });
       setSuccess(
         selectedCollectionSlug
           ? "Collection updated successfully."
           : "Collection created successfully.",
       );
-      setSelectedCollectionSlug(savedSlug);
-      await loadCollections(savedSlug);
-    } catch (err) {
+    } catch (submitError) {
       setError(
-        err instanceof Error ? err.message : "Failed to save collection",
+        submitError instanceof Error ? submitError.message : "Failed to save collection",
       );
     } finally {
       setCollectionSubmitting(false);
@@ -425,11 +510,11 @@ export default function CollectionsManager() {
       }
 
       startNewCollection();
-      await loadCollections(null);
+      await loadCollections({ autoSelectFirst: true });
       setSuccess("Collection deleted successfully.");
-    } catch (err) {
+    } catch (deleteError) {
       setError(
-        err instanceof Error ? err.message : "Failed to delete collection",
+        deleteError instanceof Error ? deleteError.message : "Failed to delete collection",
       );
     } finally {
       setCollectionDeleting(false);
@@ -456,9 +541,7 @@ export default function CollectionsManager() {
 
     try {
       if (!itemForm.title || !itemForm.slug || !itemForm.date) {
-        throw new Error(
-          "Please fill in all required item fields (title, slug, date)",
-        );
+        throw new Error("Please fill in all required item fields (title, slug, date)");
       }
 
       const response = await fetch(
@@ -484,17 +567,18 @@ export default function CollectionsManager() {
 
       const payload = await response.json();
       const savedItem = payload.data as AdminCollectionItem;
-      setSuccess(
-        selectedItemSlug
-          ? "Item updated successfully."
-          : "Item created successfully.",
-      );
-      await loadCollections(collectionSlug);
+      await loadCollections({ preferredSlug: collectionSlug });
       setSelectedItemSlug(savedItem.slug);
       setItemForm(savedItem);
-    } catch (err) {
+      setItemEditorOpen(true);
+      setSuccess(
+        selectedItemSlug ? "Item updated successfully." : "Item created successfully.",
+      );
+    } catch (submitError) {
       setError(
-        err instanceof Error ? err.message : "Failed to save collection item",
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save collection item",
       );
     } finally {
       setItemSubmitting(false);
@@ -513,9 +597,7 @@ export default function CollectionsManager() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete item "${itemForm.title}"? This cannot be undone.`,
-    );
+    const confirmed = window.confirm(`Delete item "${itemForm.title}"? This cannot be undone.`);
     if (!confirmed) {
       return;
     }
@@ -538,107 +620,166 @@ export default function CollectionsManager() {
         throw new Error(errorData.error || "Failed to delete item");
       }
 
-      await loadCollections(collectionSlug);
+      await loadCollections({ preferredSlug: collectionSlug });
       startNewItem();
+      setItemEditorOpen(false);
       setSuccess("Item deleted successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete item");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete item");
     } finally {
       setItemDeleting(false);
     }
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] text-[var(--text-light)]">
-      <aside className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
+    <div className="space-y-4 text-[var(--text-light)]">
+      <div className="rounded-2xl border border-[var(--color-secondary)]/25 bg-black/20 p-3 lg:hidden">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--color-primary)]">
-              Collections
-            </h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Collections workspace</p>
             <p className="text-sm text-[var(--text-light)]/60">
-              Manage your collections
+              Browse libraries, edit collection details, and manage items as separate mobile surfaces.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={startNewCollection}
-            className="px-3 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] rounded-md font-semibold cursor-pointer"
-          >
-            New
-          </button>
+          <span className="rounded-full border border-[var(--color-secondary)]/25 px-2.5 py-1 text-xs text-[var(--text-light)]/70">
+            {collectionsList.length} total
+          </span>
         </div>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              ["collections", "Collections"],
+              ["details", "Details"],
+              ["items", "Items"],
+            ] as Array<[CollectionsMobilePanel, string]>
+          ).map(([key, label]) => {
+            const isActive = mobilePanel === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMobilePanel(key)}
+                className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                    : "border border-[var(--color-secondary)]/20 bg-black/25 text-[var(--text-light)]/75"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-        {loadingCollections ? (
-          <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-            Loading collections...
-          </div>
-        ) : collectionsList.length === 0 ? (
-          <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-            No collections yet.
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {collectionsList.map((collection) => {
-              const isActive =
-                collection.metadata.slug === selectedCollectionSlug;
-              return (
-                <button
-                  key={collection.metadata.slug}
-                  type="button"
-                  onClick={() => selectCollection(collection)}
-                  className={`rounded-lg border px-4 py-3 text-left transition ${
-                    isActive
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                      : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
-                  }`}
-                >
-                  <p className="font-semibold text-[var(--color-primary)]">
-                    {collection.metadata.name}
-                  </p>
-                  <p className="text-sm text-[var(--text-light)]/60">
-                    /{collection.metadata.slug}
-                  </p>
-                  <p className="text-sm text-[var(--text-light)]/60">
-                    {collection.items.length} items
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </aside>
+      {(error || success) && (
+        <div
+          className={`rounded-xl border px-4 py-3 ${
+            error
+              ? "border-red-400/35 bg-red-500/10 text-red-200"
+              : "border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+          }`}
+        >
+          {error || success}
+        </div>
+      )}
 
-      <div className="grid gap-6">
-        {(error || success) && (
-          <div
-            className={`rounded-md border px-4 py-3 ${
-              error
-                ? "border-red-400/35 bg-red-500/10 text-red-200"
-                : "border-[var(--color-primary)]/35 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-            }`}
-          >
-            {error || success}
+      <div className="grid gap-4 xl:grid-cols-[240px_minmax(320px,400px)_minmax(0,1fr)]">
+        <aside className={`${mobilePanel === "collections" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-3.5 md:p-4 xl:block`}>
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--color-primary)]">Collections</h2>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                Select a workspace or start a new one.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startNewCollection}
+              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-3 py-2 font-semibold text-[var(--text-color-dark)]"
+            >
+              New
+            </button>
           </div>
-        )}
+
+          <div className="mb-4 rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Library</p>
+            <p className="mt-2 text-3xl font-semibold text-[var(--color-primary)]">
+              {collectionsList.length}
+            </p>
+            <p className="text-sm text-[var(--text-light)]/55">collections in rotation</p>
+          </div>
+
+          {loadingCollections ? (
+            <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+              Loading collections...
+            </div>
+          ) : collectionsList.length === 0 ? (
+            <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
+              No collections yet. Create one to start building the workspace.
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {collectionsList.map((collection) => {
+                const isActive = collection.metadata.slug === selectedCollectionSlug;
+                return (
+                  <button
+                    key={collection.metadata.slug}
+                    type="button"
+                    onClick={() => selectCollection(collection)}
+                    className={`cursor-pointer rounded-xl border px-4 py-3 text-left transition ${
+                      isActive
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 shadow-[0_0_0_1px_rgba(127,255,0,0.12)]"
+                        : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-[var(--color-primary)]">
+                          {collection.metadata.name}
+                        </p>
+                        <p className="truncate text-sm text-[var(--text-light)]/60">
+                          /{collection.metadata.slug}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-[var(--color-secondary)]/25 px-2 py-1 text-xs text-[var(--text-light)]/70">
+                        {collection.items.length}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm text-[var(--text-light)]/55">
+                      {collection.metadata.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </aside>
 
         <form
           onSubmit={handleCollectionSubmit}
-          className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5 space-y-5"
+          className={`${mobilePanel === "details" ? "block" : "hidden"} rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5 xl:block`}
         >
-          <div>
-            <h3 className="text-xl font-semibold text-[var(--color-primary)]">
-              {selectedCollectionSlug ? "Edit Collection" : "Create Collection"}
-            </h3>
-            <p className="text-sm text-[var(--text-light)]/60 mt-1">
-              Collections display items in a vinyl-style carousel you can flip
-              through.
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-semibold text-[var(--color-primary)]">
+                {selectedCollectionSlug ? "Collection Editor" : "New Collection"}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                This pane stays pinned to the selected collection while you browse items.
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-3 py-2 text-right">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Items</p>
+              <p className="text-lg font-semibold text-[var(--color-primary)]">
+                {currentCollection?.items.length ?? 0}
+              </p>
+            </div>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+              <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                 Collection Name
               </label>
               <input
@@ -646,103 +787,106 @@ export default function CollectionsManager() {
                 value={collectionForm.name}
                 onChange={(event) => {
                   const name = event.target.value;
-                  setCollectionForm((prev) => ({
-                    ...prev,
+                  setCollectionForm((previous) => ({
+                    ...previous,
                     name,
                     slug:
-                      !selectedCollectionSlug ||
-                      prev.slug === generateSlug(prev.name)
+                      !selectedCollectionSlug || previous.slug === generateSlug(previous.name)
                         ? generateSlug(name)
-                        : prev.slug,
+                        : previous.slug,
                   }));
                 }}
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
+                className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
                 required
               />
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Slug
+                </label>
+                <input
+                  type="text"
+                  value={collectionForm.slug}
+                  onChange={(event) =>
+                    setCollectionForm((previous) => ({
+                      ...previous,
+                      slug: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={collectionForm.date}
+                  onChange={(event) =>
+                    setCollectionForm((previous) => ({
+                      ...previous,
+                      date: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                  required
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Slug
-              </label>
-              <input
-                type="text"
-                value={collectionForm.slug}
-                onChange={(event) =>
-                  setCollectionForm((prev) => ({
-                    ...prev,
-                    slug: event.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
+              <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
                 Description
               </label>
               <textarea
                 value={collectionForm.description}
                 onChange={(event) =>
-                  setCollectionForm((prev) => ({
-                    ...prev,
+                  setCollectionForm((previous) => ({
+                    ...previous,
                     description: event.target.value,
                   }))
                 }
-                className="w-full min-h-28 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg resize-y"
+                className="min-h-36 w-full resize-y rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3"
                 required
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Date
+              <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                Collection Cover Image
               </label>
               <input
-                type="date"
-                value={collectionForm.date}
-                onChange={(event) =>
-                  setCollectionForm((prev) => ({
-                    ...prev,
-                    date: event.target.value,
-                  }))
-                }
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                required
+                type="file"
+                ref={collectionCoverInputRef}
+                onChange={handleCollectionImageUpload}
+                accept="image/*"
+                disabled={uploadingCollectionImage}
+                className="w-full cursor-pointer rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
               />
+              <p className="mt-2 text-sm text-[var(--text-light)]/60">
+                {uploadingCollectionImage
+                  ? "Uploading image..."
+                  : "Upload the collection cover art used across the public carousel."}
+              </p>
+              {collectionForm.image && (
+                <img
+                  src={collectionForm.image}
+                  alt="Collection cover preview"
+                  className="mt-4 max-h-56 rounded-xl border border-[var(--color-secondary)]/40 object-cover"
+                />
+              )}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-              Collection Cover Image
-            </label>
-            <input
-              type="file"
-              ref={collectionCoverInputRef}
-              onChange={handleCollectionImageUpload}
-              accept="image/*"
-              disabled={uploadingCollectionImage}
-              className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
-            />
-            <p className="text-sm text-[var(--text-light)]/60 mt-2">
-              {uploadingCollectionImage
-                ? "Uploading image..."
-                : "Upload a cover image for the collection."}
-            </p>
-            {collectionForm.image && (
-              <img
-                src={collectionForm.image}
-                alt="Collection cover preview"
-                className="mt-4 max-h-48 rounded border border-[var(--color-secondary)]/40"
-              />
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3">
             <button
               type="submit"
               disabled={collectionSubmitting}
-              className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-60"
+              className="cursor-pointer rounded-md bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--text-color-dark)] disabled:opacity-60"
             >
               {collectionSubmitting
                 ? "Saving..."
@@ -755,11 +899,12 @@ export default function CollectionsManager() {
               onClick={() => {
                 if (currentCollection) {
                   selectCollection(currentCollection);
-                } else {
-                  startNewCollection();
+                  return;
                 }
+
+                startNewCollection();
               }}
-              className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
+              className="cursor-pointer rounded-md border border-[var(--color-secondary)]/40 bg-black/35 px-5 py-2"
             >
               {selectedCollectionSlug ? "Reset" : "Clear"}
             </button>
@@ -768,7 +913,7 @@ export default function CollectionsManager() {
                 type="button"
                 onClick={handleCollectionDelete}
                 disabled={collectionDeleting}
-                className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
+                className="cursor-pointer rounded-md border border-red-400/50 bg-red-500/15 px-5 py-2 text-red-200 disabled:opacity-60"
               >
                 {collectionDeleting ? "Deleting..." : "Delete Collection"}
               </button>
@@ -776,265 +921,439 @@ export default function CollectionsManager() {
           </div>
         </form>
 
-        <div className="rounded-xl border border-[var(--color-secondary)]/35 bg-black/25 p-5 space-y-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-semibold text-[var(--color-primary)]">
-                Collection Items
-              </h3>
-              <p className="text-sm text-[var(--text-light)]/60">
+        <section className={`${mobilePanel === "items" ? "block" : "hidden"} w-full min-w-0 overflow-hidden rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 xl:block`}>
+          <div className="flex flex-col gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:flex-row md:items-start md:justify-between md:px-5 md:py-4">
+            <div className="min-w-0">
+              <h3 className="text-xl font-semibold text-[var(--color-primary)]">Item Workspace</h3>
+              <p className="mt-1 text-sm text-[var(--text-light)]/60">
                 {selectedCollectionSlug
-                  ? `Managing items in /${selectedCollectionSlug}`
-                  : "Save a collection before adding items."}
+                  ? `Dense browser for /${selectedCollectionSlug}. Double-click a row to edit.`
+                  : "Select or create a collection to unlock item editing."}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={startNewItem}
-              disabled={!selectedCollectionSlug && !collectionForm.slug}
-              className="px-4 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-50"
-            >
-              New Item
-            </button>
-          </div>
-
-          {currentCollection && currentCollection.items.length > 0 ? (
-            <div className="grid gap-3">
-              {currentCollection.items
-                .slice()
-                .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-                .map((item) => {
-                  const isActive = item.slug === selectedItemSlug;
-                  return (
-                    <button
-                      key={item.slug}
-                      type="button"
-                      onClick={() => selectItem(item)}
-                      className={`rounded-lg border px-4 py-3 text-left transition flex items-center gap-3 ${
-                        isActive
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                          : "border-[var(--color-secondary)]/20 bg-black/20 hover:bg-black/35"
-                      }`}
-                    >
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      )}
-                      <div>
-                        <p className="font-semibold text-[var(--color-primary)]">
-                          {item.title}
-                        </p>
-                        <p className="text-sm text-[var(--text-light)]/60">
-                          /{item.slug} &middot; {item.date}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          ) : (
-            <div className="rounded-md border border-[var(--color-secondary)]/20 bg-black/20 px-4 py-6 text-[var(--text-light)]/70">
-              {selectedCollectionSlug
-                ? "No items in this collection yet."
-                : "Create a collection first to start adding items."}
-            </div>
-          )}
-
-          <form
-            onSubmit={handleItemSubmit}
-            className="grid gap-5 border-t border-[var(--color-secondary)]/20 pt-5"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-                {selectedItemSlug ? "Edit Item" : "Create Item"}
-              </h4>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => inlineImageInputRef.current?.click()}
-                  disabled={uploadingInlineImage || !selectedCollectionSlug}
-                  className="px-3 py-1 border border-[var(--color-secondary)]/40 bg-black/35 rounded cursor-pointer disabled:opacity-50"
-                >
-                  {uploadingInlineImage ? "Uploading..." : "Insert Photo"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setItemPreview((prev) => !prev)}
-                  className="px-3 py-1 bg-[var(--color-primary)] text-[var(--text-color-dark)] rounded font-medium cursor-pointer"
-                >
-                  {itemPreview ? "Edit" : "Preview"}
-                </button>
+            <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:items-center md:justify-end">
+              <div className="rounded-xl border border-[var(--color-secondary)]/20 bg-black/20 px-3 py-2 text-left md:text-right">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">Visible items</p>
+                <p className="text-lg font-semibold text-[var(--color-primary)]">{sortedItems.length}</p>
               </div>
-            </div>
-
-            <input
-              type="file"
-              ref={inlineImageInputRef}
-              onChange={handleInlineImageUpload}
-              accept="image/*"
-              multiple
-              className="hidden"
-            />
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={itemForm.title}
-                  onChange={(event) => {
-                    const title = event.target.value;
-                    setItemForm((prev) => ({
-                      ...prev,
-                      title,
-                      slug:
-                        !selectedItemSlug ||
-                        prev.slug === generateSlug(prev.title)
-                          ? generateSlug(title)
-                          : prev.slug,
-                    }));
-                  }}
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                  required
-                  disabled={!selectedCollectionSlug}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Slug
-                </label>
-                <input
-                  type="text"
-                  value={itemForm.slug}
-                  onChange={(event) =>
-                    setItemForm((prev) => ({
-                      ...prev,
-                      slug: event.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                  required
-                  disabled={!selectedCollectionSlug}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={itemForm.date}
-                  onChange={(event) =>
-                    setItemForm((prev) => ({
-                      ...prev,
-                      date: event.target.value,
-                    }))
-                  }
-                  className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg"
-                  required
-                  disabled={!selectedCollectionSlug}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Item Image (square cover)
-              </label>
-              <input
-                type="file"
-                ref={itemCoverInputRef}
-                onChange={handleItemImageUpload}
-                accept="image/*"
-                disabled={uploadingItemImage || !selectedCollectionSlug}
-                className="w-full px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg cursor-pointer"
-              />
-              <p className="text-sm text-[var(--text-light)]/60 mt-2">
-                {uploadingItemImage
-                  ? "Uploading image..."
-                  : "Upload the main square cover image for this item (like album art)."}
-              </p>
-              {itemForm.image && (
-                <img
-                  src={itemForm.image}
-                  alt="Item cover preview"
-                  className="mt-4 w-48 h-48 object-cover rounded border border-[var(--color-secondary)]/40"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-[var(--color-secondary)]">
-                Description (Markdown)
-              </label>
-              {!itemPreview ? (
-                <textarea
-                  ref={itemTextAreaRef}
-                  value={itemForm.markdown}
-                  onChange={(event) =>
-                    setItemForm((prev) => ({
-                      ...prev,
-                      markdown: event.target.value,
-                    }))
-                  }
-                  className="w-full min-h-48 px-4 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-lg font-mono text-sm resize-y"
-                  disabled={!selectedCollectionSlug}
-                  placeholder="Optional notes or description for this item..."
-                />
-              ) : (
-                <div className="min-h-48 px-4 py-3 border border-[var(--color-secondary)]/40 bg-black/40 rounded-lg overflow-auto leading-7">
-                  <MarkdownRenderer content={itemForm.markdown} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="submit"
-                disabled={itemSubmitting || !selectedCollectionSlug}
-                className="px-5 py-2 bg-[var(--color-primary)] text-[var(--text-color-dark)] font-semibold rounded-md cursor-pointer disabled:opacity-50"
-              >
-                {itemSubmitting
-                  ? "Saving..."
-                  : selectedItemSlug
-                    ? "Save Item"
-                    : "Create Item"}
-              </button>
               <button
                 type="button"
-                onClick={() => {
-                  const matchedItem = currentCollection?.items.find(
-                    (item) => item.slug === selectedItemSlug,
-                  );
-                  if (matchedItem) {
-                    selectItem(matchedItem);
-                  } else {
-                    startNewItem();
-                  }
-                }}
-                className="px-5 py-2 border border-[var(--color-secondary)]/40 bg-black/35 rounded-md cursor-pointer"
+                onClick={openNewItemEditor}
+                disabled={!selectedCollectionSlug}
+                className="w-full cursor-pointer rounded-md bg-[var(--color-primary)] px-4 py-2 font-semibold text-[var(--text-color-dark)] disabled:opacity-50 md:w-auto"
               >
-                {selectedItemSlug ? "Reset" : "Clear"}
+                New Item
               </button>
-              {selectedItemSlug && (
-                <button
-                  type="button"
-                  onClick={handleItemDelete}
-                  disabled={itemDeleting}
-                  className="px-5 py-2 border border-red-400/50 bg-red-500/15 text-red-200 rounded-md cursor-pointer disabled:opacity-60"
-                >
-                  {itemDeleting ? "Deleting..." : "Delete Item"}
-                </button>
-              )}
             </div>
-          </form>
-        </div>
+          </div>
+
+          {!selectedCollectionSlug ? (
+            <div className="px-4 py-6 text-[var(--text-light)]/65 md:px-5 md:py-8">
+              Save a collection, then open the item workspace from here.
+            </div>
+          ) : sortedItems.length === 0 ? (
+            <div className="px-4 py-6 text-[var(--text-light)]/65 md:px-5 md:py-8">
+              No items in this collection yet. Use <span className="text-[var(--color-primary)]">New Item</span> to add the first one.
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 px-4 py-4 md:hidden">
+                {sortedItems.map((item) => {
+                  const isActive = item.slug === selectedItemSlug;
+                  const hasMarkdown = item.markdown.trim().length > 0;
+
+                  return (
+                    <article
+                      key={item.slug}
+                      className={`min-w-0 overflow-hidden rounded-2xl border bg-black/20 p-4 transition ${
+                        isActive
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                          : "border-[var(--color-secondary)]/20"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--color-secondary)]/20 bg-black/25">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.title}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs text-[var(--text-light)]/35">none</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[var(--color-primary)]">
+                                {item.title}
+                              </p>
+                              <p className="truncate text-sm text-[var(--text-light)]/60">
+                                /{item.slug}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs ${
+                                hasMarkdown
+                                  ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
+                                  : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
+                              }`}
+                            >
+                              {hasMarkdown ? "Ready" : "Draft"}
+                            </span>
+                          </div>
+                          <p className="mt-2 truncate text-sm text-[var(--text-light)]/55">
+                            {getItemSummary(item.markdown)}
+                          </p>
+                          <p className="mt-2 text-xs text-[var(--text-light)]/55">{item.date}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => selectItem(item)}
+                          className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/30 bg-black/25 px-3 py-3 text-sm"
+                        >
+                          Select
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openItemEditor(item)}
+                          className="cursor-pointer rounded-xl bg-[var(--color-primary)] px-3 py-3 text-sm font-semibold text-[var(--text-color-dark)]"
+                        >
+                          Open Editor
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <div className="min-w-[720px]">
+                  <div className="grid grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 border-b border-[var(--color-secondary)]/15 px-5 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-secondary)]/70">
+                    <span>Item</span>
+                    <span>Slug</span>
+                    <span>Date</span>
+                    <span>Status</span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-secondary)]/12">
+                    {sortedItems.map((item) => {
+                      const isActive = item.slug === selectedItemSlug;
+                      const hasMarkdown = item.markdown.trim().length > 0;
+
+                      return (
+                        <button
+                          key={item.slug}
+                          type="button"
+                          onClick={() => selectItem(item)}
+                          onDoubleClick={() => openItemEditor(item)}
+                          className={`grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 px-5 py-3 text-left transition ${
+                            isActive
+                              ? "bg-[var(--color-primary)]/10"
+                              : "hover:bg-white/4"
+                          }`}
+                          title="Double-click to open the fullscreen editor"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--color-secondary)]/20 bg-black/25">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs text-[var(--text-light)]/35">none</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-[var(--color-primary)]">
+                                {item.title}
+                              </p>
+                              <p className="truncate text-sm text-[var(--text-light)]/55">
+                                {getItemSummary(item.markdown)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="self-center text-sm text-[var(--text-light)]/65">/{item.slug}</div>
+                          <div className="self-center text-sm text-[var(--text-light)]/65">{item.date}</div>
+                          <div className="self-center text-sm">
+                            <span
+                              className={`rounded-full border px-2 py-1 text-xs ${
+                                hasMarkdown
+                                  ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
+                                  : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
+                              }`}
+                            >
+                              {hasMarkdown ? "Ready" : "Draft"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
       </div>
+
+      {itemEditorOpen && (
+        <div className="fixed inset-0 z-[90] bg-black/80 p-3 backdrop-blur-sm lg:p-6">
+          <div className="flex h-full flex-col overflow-hidden rounded-[28px] border border-[var(--color-secondary)]/35 bg-[var(--color-dark)] shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-secondary)]/20 px-4 py-3 md:px-5 md:py-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-secondary)]/75">Fullscreen item editor</p>
+                <h3 className="mt-1 text-2xl font-semibold text-[var(--color-primary)]">
+                  {selectedItemSlug ? itemForm.title || "Edit Item" : "Create Item"}
+                </h3>
+                <p className="mt-1 text-sm text-[var(--text-light)]/60">
+                  {selectedCollectionSlug
+                    ? `Editing inside /${selectedCollectionSlug}`
+                    : "Save the collection before adding items."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setItemEditorOpen(false)}
+                className="cursor-pointer rounded-md border border-[var(--color-secondary)]/35 bg-black/35 px-4 py-2 text-sm text-[var(--text-light)] transition hover:bg-black/50"
+              >
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleItemSubmit} className="min-h-0 flex-1 overflow-y-auto p-3 md:p-4 xl:grid xl:gap-5 xl:overflow-hidden xl:p-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+              <section className="rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 p-4 xl:min-h-0 xl:overflow-y-auto">
+                <div className="grid gap-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={itemForm.title}
+                      onChange={(event) => {
+                        const title = event.target.value;
+                        setItemForm((previous) => ({
+                          ...previous,
+                          title,
+                          slug:
+                            !selectedItemSlug || previous.slug === generateSlug(previous.title)
+                              ? generateSlug(title)
+                              : previous.slug,
+                        }));
+                      }}
+                      className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                      required
+                      disabled={!selectedCollectionSlug}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Slug
+                    </label>
+                    <input
+                      type="text"
+                      value={itemForm.slug}
+                      onChange={(event) =>
+                        setItemForm((previous) => ({
+                          ...previous,
+                          slug: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                      required
+                      disabled={!selectedCollectionSlug}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={itemForm.date}
+                      onChange={(event) =>
+                        setItemForm((previous) => ({
+                          ...previous,
+                          date: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                      required
+                      disabled={!selectedCollectionSlug}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+                      Item Image (square cover)
+                    </label>
+                    <input
+                      type="file"
+                      ref={itemCoverInputRef}
+                      onChange={handleItemImageUpload}
+                      accept="image/*"
+                      disabled={uploadingItemImage || !selectedCollectionSlug}
+                      className="w-full cursor-pointer rounded-lg border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-2"
+                    />
+                    <p className="mt-2 text-sm text-[var(--text-light)]/60">
+                      {uploadingItemImage
+                        ? "Uploading image..."
+                        : "Upload the square cover art for the selected item."}
+                    </p>
+                    {itemForm.image && (
+                      <img
+                        src={itemForm.image}
+                        alt="Item cover preview"
+                        className="mt-4 aspect-square w-full rounded-xl border border-[var(--color-secondary)]/40 object-cover"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="submit"
+                    disabled={itemSubmitting || !selectedCollectionSlug}
+                    className="cursor-pointer rounded-md bg-[var(--color-primary)] px-5 py-2 font-semibold text-[var(--text-color-dark)] disabled:opacity-50"
+                  >
+                    {itemSubmitting
+                      ? "Saving..."
+                      : selectedItemSlug
+                        ? "Save Item"
+                        : "Create Item"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const matchedItem = currentCollection?.items.find((item) => item.slug === selectedItemSlug);
+                      if (matchedItem) {
+                        selectItem(matchedItem);
+                        return;
+                      }
+
+                      startNewItem();
+                    }}
+                    className="cursor-pointer rounded-md border border-[var(--color-secondary)]/40 bg-black/35 px-5 py-2"
+                  >
+                    {selectedItemSlug ? "Reset" : "Clear"}
+                  </button>
+                  {selectedItemSlug && (
+                    <button
+                      type="button"
+                      onClick={handleItemDelete}
+                      disabled={itemDeleting}
+                      className="cursor-pointer rounded-md border border-red-400/50 bg-red-500/15 px-5 py-2 text-red-200 disabled:opacity-60"
+                    >
+                      {itemDeleting ? "Deleting..." : "Delete Item"}
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              <section className="mt-4 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--color-secondary)]/25 bg-black/25 xl:mt-0">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-secondary)]/20 px-4 py-3">
+                  <div>
+                    <h4 className="font-semibold text-[var(--color-primary)]">Markdown Workspace</h4>
+                    <p className="text-sm text-[var(--text-light)]/55">
+                      Desktop keeps editor and preview side by side. Smaller screens can swap surfaces.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex rounded-lg border border-[var(--color-secondary)]/30 bg-black/25 p-1 xl:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setItemEditorSurface("edit")}
+                        className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
+                          itemEditorSurface === "edit"
+                            ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                            : "text-[var(--text-light)]/70"
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setItemEditorSurface("preview")}
+                        className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
+                          itemEditorSurface === "preview"
+                            ? "bg-[var(--color-primary)] text-[var(--text-color-dark)]"
+                            : "text-[var(--text-light)]/70"
+                        }`}
+                      >
+                        Preview
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => inlineImageInputRef.current?.click()}
+                      disabled={uploadingInlineImage || !selectedCollectionSlug}
+                      className="cursor-pointer rounded-md border border-[var(--color-secondary)]/40 bg-black/35 px-3 py-2 text-sm disabled:opacity-50"
+                    >
+                      {uploadingInlineImage ? "Uploading..." : "Insert Photo"}
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  ref={inlineImageInputRef}
+                  onChange={handleInlineImageUpload}
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                />
+
+                <div className="grid min-h-0 flex-1 xl:grid-cols-2">
+                  <div
+                    className={`min-h-0 border-b border-[var(--color-secondary)]/15 xl:border-b-0 xl:border-r ${
+                      itemEditorSurface === "edit" ? "block" : "hidden xl:block"
+                    }`}
+                  >
+                    <div className="border-b border-[var(--color-secondary)]/10 px-4 py-2 text-xs uppercase tracking-[0.16em] text-[var(--color-secondary)]/65">
+                      Editor
+                    </div>
+                    <div className="h-full p-4">
+                      <textarea
+                        ref={itemTextAreaRef}
+                        value={itemForm.markdown}
+                        onChange={(event) =>
+                          setItemForm((previous) => ({
+                            ...previous,
+                            markdown: event.target.value,
+                          }))
+                        }
+                        className="h-full min-h-[320px] w-full resize-none rounded-xl border border-[var(--color-secondary)]/30 bg-black/35 px-4 py-3 font-mono text-sm"
+                        disabled={!selectedCollectionSlug}
+                        placeholder="Optional notes or description for this item..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className={`${itemEditorSurface === "preview" ? "block" : "hidden xl:block"} min-h-0`}>
+                    <div className="border-b border-[var(--color-secondary)]/10 px-4 py-2 text-xs uppercase tracking-[0.16em] text-[var(--color-secondary)]/65">
+                      Preview
+                    </div>
+                    <div className="h-full min-h-[320px] overflow-y-auto px-4 py-4 leading-7">
+                      {itemForm.markdown.trim() ? (
+                        <MarkdownRenderer content={itemForm.markdown} />
+                      ) : (
+                        <p className="text-[var(--text-light)]/50">Preview updates as you write.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

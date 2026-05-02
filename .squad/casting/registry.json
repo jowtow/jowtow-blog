@@ -1,0 +1,40 @@
+{
+  "agents": {
+    "stu": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Stu",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    },
+    "ambrose": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Ambrose",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    },
+    "cook": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Cook",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    },
+    "joey": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Joey",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    },
+    "scribe": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Scribe",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    },
+    "ralph": {
+      "created_at": "2026-05-01T11:58:01.394Z",
+      "persistent_name": "Ralph",
+      "universe": "King Gizzard and the Lizard Wizard",
+      "status": "active"
+    }
+  }
+}
