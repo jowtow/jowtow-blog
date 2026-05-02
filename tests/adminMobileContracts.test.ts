@@ -106,6 +106,18 @@ test('collections item workspace keeps mobile cards and desktop-only horizontal 
   );
   assert.match(
     collectionsManager,
+    /<div className="mt-2 grid grid-cols-2 gap-2">[\s\S]*Move Earlier[\s\S]*Move Later/s,
+  );
+  assert.match(
+    collectionsManager,
+    /\/api\/collections\/\$\{encodeURIComponent\(selectedCollectionSlug\)\}\/items\/reorder/,
+  );
+  assert.match(
+    collectionsManager,
     /<div className="hidden overflow-x-auto md:block">[\s\S]*<div className="min-w-\[720px\]">[\s\S]*grid-cols-\[minmax\(0,2\.1fr\)_150px_120px_120px\][\s\S]*onDoubleClick=\{\(\) => openItemEditor\(item\)\}/s,
+  );
+  assert.match(
+    collectionsManager,
+    /aria-label=\{`Move \$\{item\.title\} earlier`\}[\s\S]*aria-label=\{`Move \$\{item\.title\} later`\}/s,
   );
 });

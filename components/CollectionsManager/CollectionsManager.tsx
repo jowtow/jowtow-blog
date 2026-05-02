@@ -19,6 +19,7 @@ type AdminCollectionItem = {
   markdown: string;
   image: string;
   date: string;
+  order: number;
 };
 
 type AdminCollection = {
@@ -46,6 +47,7 @@ const createEmptyItemForm = (collectionSlug = ""): AdminCollectionItem => ({
   markdown: "",
   image: "",
   date: getTodayString(),
+  order: 0,
 });
 
 const generateSlug = (value: string) =>
@@ -86,6 +88,7 @@ export default function CollectionsManager() {
   const [itemForm, setItemForm] = useState<AdminCollectionItem>(createEmptyItemForm);
   const [itemSubmitting, setItemSubmitting] = useState(false);
   const [itemDeleting, setItemDeleting] = useState(false);
+  const [itemReorderingSlug, setItemReorderingSlug] = useState<string | null>(null);
   const [itemEditorOpen, setItemEditorOpen] = useState(false);
   const [itemEditorSurface, setItemEditorSurface] = useState<ItemEditorSurface>("edit");
   const [mobilePanel, setMobilePanel] = useState<CollectionsMobilePanel>("collections");
@@ -277,10 +280,113 @@ export default function CollectionsManager() {
       return [];
     }
 
-    return currentCollection.items
-      .slice()
-      .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+    return currentCollection.items.slice();
   }, [currentCollection]);
+
+  const syncCollectionItems = useCallback(
+    (collectionSlug: string, items: AdminCollectionItem[], preferredItemSlug?: string | null) => {
+      setCollectionsList((previous) =>
+        previous.map((collection) =>
+          collection.metadata.slug === collectionSlug
+            ? {
+                ...collection,
+                items,
+              }
+            : collection
+        )
+      );
+
+      if (selectedCollectionSlug !== collectionSlug) {
+        return;
+      }
+
+      const nextSelectedItemSlug = preferredItemSlug ?? selectedItemSlug;
+      if (!nextSelectedItemSlug) {
+        return;
+      }
+
+      const matchedItem = items.find((item) => item.slug === nextSelectedItemSlug);
+      if (!matchedItem) {
+        return;
+      }
+
+      setSelectedItemSlug(matchedItem.slug);
+      setItemForm(matchedItem);
+    },
+    [selectedCollectionSlug, selectedItemSlug]
+  );
+
+  const moveItemByOffset = useCallback(
+    async (itemSlug: string, offset: -1 | 1) => {
+      if (!selectedCollectionSlug || !currentCollection) {
+        setError("Select a collection before reordering items.");
+        return;
+      }
+
+      if (!authToken && !isLocalBypassEnabled) {
+        setError("Authentication token not available. Please refresh the page.");
+        return;
+      }
+
+      const currentIndex = currentCollection.items.findIndex((item) => item.slug === itemSlug);
+      if (currentIndex === -1) {
+        setError("Could not find the selected item to reorder.");
+        return;
+      }
+
+      const nextIndex = currentIndex + offset;
+      if (nextIndex < 0 || nextIndex >= currentCollection.items.length) {
+        return;
+      }
+
+      const nextItems = currentCollection.items.slice();
+      const [movedItem] = nextItems.splice(currentIndex, 1);
+      nextItems.splice(nextIndex, 0, movedItem);
+
+      setItemReorderingSlug(itemSlug);
+      setError(null);
+      setSuccess(null);
+
+      try {
+        const response = await fetch(
+          `/api/collections/${encodeURIComponent(selectedCollectionSlug)}/items/reorder`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({
+              slugs: nextItems.map((item) => item.slug),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to reorder collection items");
+        }
+
+        const payload = await response.json();
+        const reorderedItems = payload.data as AdminCollectionItem[];
+        syncCollectionItems(selectedCollectionSlug, reorderedItems, itemSlug);
+        setSuccess(
+          offset < 0
+            ? `Moved "${movedItem.title}" earlier in the collection.`
+            : `Moved "${movedItem.title}" later in the collection.`
+        );
+      } catch (reorderError) {
+        setError(
+          reorderError instanceof Error
+            ? reorderError.message
+            : "Failed to reorder collection items"
+        );
+      } finally {
+        setItemReorderingSlug(null);
+      }
+    },
+    [authToken, currentCollection, getAuthHeaders, isLocalBypassEnabled, selectedCollectionSlug, syncCollectionItems]
+  );
 
   const startNewItem = useCallback(() => {
     if (!selectedCollectionSlug) {
@@ -958,7 +1064,7 @@ export default function CollectionsManager() {
           ) : (
             <>
               <div className="grid gap-3 px-4 py-4 md:hidden">
-                {sortedItems.map((item) => {
+                {sortedItems.map((item, index) => {
                   const isActive = item.slug === selectedItemSlug;
                   const hasMarkdown = item.markdown.trim().length > 0;
 
@@ -1025,6 +1131,24 @@ export default function CollectionsManager() {
                           Open Editor
                         </button>
                       </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void moveItemByOffset(item.slug, -1)}
+                          disabled={index === 0 || Boolean(itemReorderingSlug)}
+                          className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/30 bg-black/25 px-3 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          Move Earlier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void moveItemByOffset(item.slug, 1)}
+                          disabled={index === sortedItems.length - 1 || Boolean(itemReorderingSlug)}
+                          className="cursor-pointer rounded-xl border border-[var(--color-secondary)]/30 bg-black/25 px-3 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          Move Later
+                        </button>
+                      </div>
                     </article>
                   );
                 })}
@@ -1039,16 +1163,23 @@ export default function CollectionsManager() {
                     <span>Status</span>
                   </div>
                   <div className="divide-y divide-[var(--color-secondary)]/12">
-                    {sortedItems.map((item) => {
+                    {sortedItems.map((item, index) => {
                       const isActive = item.slug === selectedItemSlug;
                       const hasMarkdown = item.markdown.trim().length > 0;
 
                       return (
-                        <button
+                        <div
                           key={item.slug}
-                          type="button"
                           onClick={() => selectItem(item)}
                           onDoubleClick={() => openItemEditor(item)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              selectItem(item);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                           className={`grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_150px_120px_120px] gap-3 px-5 py-3 text-left transition ${
                             isActive
                               ? "bg-[var(--color-primary)]/10"
@@ -1079,18 +1210,46 @@ export default function CollectionsManager() {
                           </div>
                           <div className="self-center text-sm text-[var(--text-light)]/65">/{item.slug}</div>
                           <div className="self-center text-sm text-[var(--text-light)]/65">{item.date}</div>
-                          <div className="self-center text-sm">
-                            <span
-                              className={`rounded-full border px-2 py-1 text-xs ${
-                                hasMarkdown
-                                  ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
-                                  : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
-                              }`}
-                            >
-                              {hasMarkdown ? "Ready" : "Draft"}
-                            </span>
+                          <div className="self-center">
+                            <div className="flex items-center justify-between gap-2">
+                              <span
+                                className={`rounded-full border px-2 py-1 text-xs ${
+                                  hasMarkdown
+                                    ? "border-[var(--color-primary)]/40 text-[var(--color-primary)]"
+                                    : "border-[var(--color-secondary)]/25 text-[var(--text-light)]/55"
+                                }`}
+                              >
+                                {hasMarkdown ? "Ready" : "Draft"}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void moveItemByOffset(item.slug, -1);
+                                  }}
+                                  disabled={index === 0 || Boolean(itemReorderingSlug)}
+                                  className="cursor-pointer rounded-md border border-[var(--color-secondary)]/30 bg-black/25 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-45"
+                                  aria-label={`Move ${item.title} earlier`}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void moveItemByOffset(item.slug, 1);
+                                  }}
+                                  disabled={index === sortedItems.length - 1 || Boolean(itemReorderingSlug)}
+                                  className="cursor-pointer rounded-md border border-[var(--color-secondary)]/30 bg-black/25 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-45"
+                                  aria-label={`Move ${item.title} later`}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
