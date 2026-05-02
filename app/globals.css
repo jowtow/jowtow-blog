@@ -48,6 +48,14 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@media (min-width: 768px) {
+  html.admin-route,
+  body.admin-route {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 @keyframes slideInFromBottom {
   0% {
     transform: translateY(100%);
