@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth";
+import { Lock } from 'lucide-react';
 
 export default function Header() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -29,11 +30,13 @@ export default function Header() {
             <Link href="/about" className="m-3">
               about
             </Link>
-            {!isLoading && isAuthenticated && (
+            {!isLoading && isAuthenticated ?(
               <Link href="/admin" className="m-3 text-yellow-400 font-semibold">
                 admin
               </Link>
-            )}
+            ) : (<Link href="/admin/login" className="m-3 text-gray-500 ">
+                <Lock />
+              </Link>)}
           </div>
         </nav>
       </header>
