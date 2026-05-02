@@ -13,3 +13,8 @@
 ## Collections Item-Workspace Scroll Fix (2026-05-02)
 
 - **2026-05-02T15:41:30.668+00:00**: Reviewer gate for the focused Collections item-workspace scroll fix locks two contracts in source tests: mobile stays on stacked cards without horizontal scrolling, and desktop keeps the dense table inside a desktop-only `overflow-x-auto` wrapper with the existing wide three-pane shell. This catches the likely regression surface without waiting for browser harness work, while protecting the intended desktop information density. (Joey)
+
+## Collections Mobile Card Truncation (2026-05-02)
+
+- **2026-05-02T16:04:37.513+00:00**: Mobile collection item cards no longer clip the action row on narrow screens. Decision: keep desktop table unchanged, harden mobile cards with `min-w-0 overflow-hidden` boundary and truncate the summary preview above Select/Open Editor buttons. Fixes phone-width clipping with surgical patch to mobile markup. (Ambrose)
+- **2026-05-02T16:04:37.513+00:00**: Review verdict — approved. Collections mobile cards now have `min-w-0 overflow-hidden` and summary preview truncation. Desktop behavior intact: dense table behind `md:block` + `overflow-x-auto` with `min-w-[720px]` shell. Validation passed: `npm test`, `npm run lint`, `npm run build`. Source-contract coverage in `tests/adminMobileContracts.test.ts` locks mobile truncation and desktop table contracts. (Joey)

@@ -9,6 +9,7 @@
 ## Learnings
 
 <!-- Append learnings below -->
+- 2026-05-02T16:04:37.513+00:00: Collections mobile item cards stay safe inside the overflow-hidden item workspace when each card gets `min-w-0 overflow-hidden` and the summary preview uses `truncate`, preventing long copy from clipping the Select/Open Editor actions.
 - 2026-05-02T15:41:30.668+00:00: The Collections item workspace header now uses `w-full min-w-0 overflow-hidden` plus a mobile-stacked control group, keeping phones free of horizontal scroll while restoring the dense side-by-side header from `md+`.
 - 2026-05-02T14:47:34.150+00:00: Mobile admin scroll ownership now lives in the page flow below `md`, while `components/RouteAwareMain/RouteAwareMain.tsx`, `app/admin/layout.tsx`, and `app/admin/page.tsx` keep the viewport-locked shell only on desktop.
 - 2026-05-02T14:47:34.150+00:00: `app/admin/page.tsx` uses a sticky horizontal tab strip with short mobile labels and per-tab width modes so navigation stays reachable on phones without giving up the wide desktop workspaces.
@@ -18,6 +19,16 @@
 - 2026-05-02T11:41:01.641+00:00: `app/admin/page.tsx` now assigns per-tab shell modes so Dashboard/Create stay constrained while Collections/Series/Images render in the wider workspace shell; `components/ImagesManager/ImagesManager.tsx` now fills that shell cleanly.
 
 ## Team Session Update
+
+**2026-05-02T16:04:37.513+00:00: Collections Mobile Item Card Truncation**
+
+- Implemented fix for mobile collection item cards clipping action buttons
+- Added `min-w-0 overflow-hidden` boundary to each mobile card
+- Truncated summary preview text above Select/Open Editor button grid  
+- Surgical patch to mobile markup; desktop dense table preserved
+- Desktop behavior verified: `md:block` + `overflow-x-auto` wrapper unchanged
+- Joey approved implementation with locked source-contract tests
+- Validation: `npm test`, `npm run lint`, `npm run build` all passing
 
 **2026-05-02T15:41:30.668+00:00: Collections Item-Workspace Scroll Fix**
 
