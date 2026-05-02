@@ -4,6 +4,7 @@ import Header from "@/components/Header/Header";
 import Link from "next/link";
 import { AuthProvider } from "@/components/AuthProvider/AuthProvider";
 import RouteAwareMain from "@/components/RouteAwareMain/RouteAwareMain";
+import { Lock } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "jowtow.dev",
@@ -35,6 +36,9 @@ export default function RootLayout({
               <Link href="/collections">collections</Link>
               <Link href="/music">music</Link>
               <Link href="/about">about</Link>
+              <Link href="/admin/login" className="m-3 text-gray-500 ">
+                <Lock size={7}/>
+              </Link>
             </div>
           </footer>
         </AuthProvider>
