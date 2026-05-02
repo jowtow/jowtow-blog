@@ -94,7 +94,15 @@ test('collections item workspace keeps mobile cards and desktop-only horizontal 
   );
   assert.match(
     collectionsManager,
-    /<div className="grid gap-3 px-4 py-4 md:hidden">[\s\S]*Open Editor/s,
+    /<div className="grid gap-3 px-4 py-4 md:hidden">[\s\S]*min-w-0 overflow-hidden rounded-2xl border bg-black\/20 p-4 transition[\s\S]*mt-2 truncate text-sm text-\[var\(--text-light\)\]\/55[\s\S]*Open Editor/s,
+  );
+  assert.match(
+    collectionsManager,
+    /className="truncate text-sm text-\[var\(--text-light\)\]\/55">[\s\S]*\{getItemSummary\(item\.markdown\)\}/s,
+  );
+  assert.match(
+    collectionsManager,
+    /<div className="mt-4 grid grid-cols-2 gap-2">[\s\S]*Select[\s\S]*Open Editor/s,
   );
   assert.match(
     collectionsManager,

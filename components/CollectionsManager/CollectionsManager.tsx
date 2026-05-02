@@ -965,7 +965,7 @@ export default function CollectionsManager() {
                   return (
                     <article
                       key={item.slug}
-                      className={`rounded-2xl border bg-black/20 p-4 transition ${
+                      className={`min-w-0 overflow-hidden rounded-2xl border bg-black/20 p-4 transition ${
                         isActive
                           ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
                           : "border-[var(--color-secondary)]/20"
@@ -1003,7 +1003,7 @@ export default function CollectionsManager() {
                               {hasMarkdown ? "Ready" : "Draft"}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm text-[var(--text-light)]/55">
+                          <p className="mt-2 truncate text-sm text-[var(--text-light)]/55">
                             {getItemSummary(item.markdown)}
                           </p>
                           <p className="mt-2 text-xs text-[var(--text-light)]/55">{item.date}</p>

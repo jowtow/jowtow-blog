@@ -25,4 +25,6 @@ When the repo does not have a browser or DOM component test harness, protect hig
 - For responsive data-workspace fixes, pair assertions for both sides of the breakpoint boundary:
   - mobile presentation stays on the stacked/card surface (`md:hidden` or equivalent)
   - any `overflow-x-auto` wrapper and wide `min-w-[...]` table shell stay gated to desktop breakpoints
+- When those mobile cards live inside an `overflow-hidden` workspace panel, lock `min-w-0 overflow-hidden` on the card itself so child copy cannot silently widen the card and clip its controls.
+- When mobile cards include action buttons beneath preview text, also lock the preview clamp (`truncate`/`line-clamp-*` plus word-breaking as needed) and the button-row grid so long copy cannot push or visually clip the mobile controls.
 - This keeps “remove mobile horizontal overflow” fixes from accidentally flattening the desktop layout or reintroducing page-level sideways scroll on small screens.
