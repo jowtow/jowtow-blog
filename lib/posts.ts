@@ -35,6 +35,17 @@ export type Series = {
   posts: Post[];
 };
 
+export const DEFAULT_DYNAMIC_POST_AUTHOR = "John Townsend";
+
+export function normalizeDynamicPostAuthor(author: unknown): string | undefined {
+  if (typeof author !== "string") {
+    return undefined;
+  }
+
+  const trimmedAuthor = author.trim();
+  return trimmedAuthor || undefined;
+}
+
 export async function getPosts() {
   const staticPosts = await getStaticPosts();
   const dynamicPosts = await getDynamicPosts();
@@ -90,7 +101,9 @@ export async function getDynamicPosts(): Promise<Post[]> {
           metadata: {
             title: postData.title,
             image: postData.image,
-            author: postData.author,
+            author:
+              normalizeDynamicPostAuthor(postData.author) ??
+              DEFAULT_DYNAMIC_POST_AUTHOR,
             date: postData.date,
           },
           markdownBody: postData.markdown,
@@ -251,7 +264,9 @@ export async function getPostBySlug(slug: string): Promise<Post> {
         metadata: {
           title: postData.title,
           image: postData.image,
-          author: postData.author,
+          author:
+            normalizeDynamicPostAuthor(postData.author) ??
+            DEFAULT_DYNAMIC_POST_AUTHOR,
           date: postData.date,
         },
         markdownBody: postData.markdown,

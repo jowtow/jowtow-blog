@@ -23,6 +23,44 @@ test("post saves wait for a fresh post read before claiming success", async () =
   assert.match(adminPage, /throw new Error\(message\);/);
 });
 
+test("dynamic post author stays editable in the editor and normalizes to John Townsend", async () => {
+  const [postEditor, postsRoute, postsLib] = await Promise.all([
+    readSource("components/PostEditor/PostEditor.tsx"),
+    readSource("app/api/posts/route.ts"),
+    readSource("lib/posts.ts"),
+  ]);
+
+  assert.match(postEditor, /const DEFAULT_POST_AUTHOR = "John Townsend";/);
+  assert.match(postEditor, /const emptyFormData = \{[\s\S]*author: DEFAULT_POST_AUTHOR,[\s\S]*\};/s);
+  assert.match(
+    postEditor,
+    /const toFormData = \(post: NonNullable<PostEditorProps\["initialPost"\]>\) => \(\{[\s\S]*author: post\.author\?\.trim\(\) \|\| DEFAULT_POST_AUTHOR,[\s\S]*\}\);/s,
+  );
+  assert.match(
+    postEditor,
+    /<input[\s\S]*name="author"[\s\S]*value=\{formData\.author\}[\s\S]*placeholder=\{DEFAULT_POST_AUTHOR\}/s,
+  );
+  assert.match(postEditor, /Controls the public byline only\./);
+  assert.match(
+    postEditor,
+    /body: JSON\.stringify\(\{[\s\S]*originalSlug: initialPost\?\.slug,[\s\S]*author: formData\.author,[\s\S]*date: initialPost\?\.date \|\| new Date\(\)\.toISOString\(\)\.split\("T"\)\[0\],[\s\S]*\}\)/s,
+  );
+
+  assert.match(postsLib, /export const DEFAULT_DYNAMIC_POST_AUTHOR = "John Townsend";/);
+  assert.match(
+    postsLib,
+    /export function normalizeDynamicPostAuthor\(author: unknown\): string \| undefined \{[\s\S]*const trimmedAuthor = author\.trim\(\);[\s\S]*return trimmedAuthor \|\| undefined;[\s\S]*\}/s,
+  );
+  assert.match(
+    postsRoute,
+    /author:\s*normalizeDynamicPostAuthor\(author\) \?\? DEFAULT_DYNAMIC_POST_AUTHOR,/s,
+  );
+  assert.match(
+    postsRoute,
+    /author:\s*normalizeDynamicPostAuthor\(author\) \?\?[\s\S]*normalizeDynamicPostAuthor\(existingPost\.author\) \?\?[\s\S]*DEFAULT_DYNAMIC_POST_AUTHOR,/s,
+  );
+});
+
 test("collections and series mutations re-read the server while preserving selection", async () => {
   const [collectionsManager, seriesManager] = await Promise.all([
     readSource("components/CollectionsManager/CollectionsManager.tsx"),

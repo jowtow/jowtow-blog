@@ -8,7 +8,7 @@
 
 ## Learnings
 
-<!-- Append learnings below -->
+- 2026-05-09T17:28:31.028+00:00: Author field UI analysis for dynamic posts. Current behavior: author computed at submit (lines 274–278 in PostEditor), not part of formData. Analysis for editable field: add author to emptyFormData and toFormData, place input after slug field in grid (md:grid-cols-3), send formData.author directly in submit payload instead of computed logic. Create mode defaults to "John Townsend"; edit mode preserves initial post author with fallback. No API changes needed. Decision written to `.squad/decisions/inbox/ambrose-author-ui.md`.
 - 2026-05-02T17:36:50.506+00:00: Admin data freshness ensures saved posts/collections/items always appear immediately. Added `cache: 'no-store'` to all admin fetch calls (PostEditor, Collections, Series, Images managers) and server-side `Cache-Control` headers on GET endpoints. This prevents browser/Next.js cache from returning stale data after saves. Updated `app/admin/page.tsx:51`, `components/CollectionsManager/CollectionsManager.tsx:182`, `components/SeriesManager/SeriesManager.tsx:189`, `components/ImagesManager/ImagesManager.tsx:151`, and all admin API GET routes (`/api/posts`, `/api/collections`, `/api/series`, `/api/images`).
 - 2026-05-02T16:04:37.513+00:00: Collections mobile item cards stay safe inside the overflow-hidden item workspace when each card gets `min-w-0 overflow-hidden` and the summary preview uses `truncate`, preventing long copy from clipping the Select/Open Editor actions.
 - 2026-05-02T15:41:30.668+00:00: The Collections item workspace header now uses `w-full min-w-0 overflow-hidden` plus a mobile-stacked control group, keeping phones free of horizontal scroll while restoring the dense side-by-side header from `md+`.

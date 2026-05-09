@@ -41,6 +41,9 @@
 - 2026-05-02T17:36:50.506+00:00: The `GET /api/series` route was missing `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` while all other admin GET routes (posts, collections, images) already had it — this was the last gap in the "always fresh" guarantee.
 - 2026-05-02T17:36:50.506+00:00: Two-layer approach for admin freshness: (1) server-side `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate` on every admin GET route response prevents Netlify edge CDN caching; (2) client-side `cache: 'no-store'` on every GET fetch call prevents browser HTTP cache re-use. Both layers are now complete across all four admin data endpoints.
 - 2026-05-02T17:36:50.506+00:00: In Next.js 16 (used here), API routes are already dynamic by default (no `export const dynamic = 'force-dynamic'` needed) — confirmed by build output showing all `/api/*` routes marked `ƒ (Dynamic)`. The issue was purely HTTP-layer caching (CDN + browser), not Next.js Full Route Cache.
+- 2026-05-09T17:28:31.028+00:00: Top-level dynamic posts currently derive `author` implicitly in `components/PostEditor/PostEditor.tsx` and `app/api/posts/route.ts`, while dynamic series posts already expose an explicit editable author field in `components/SeriesManager/SeriesManager.tsx`.
+- 2026-05-09T17:28:31.028+00:00: Static post frontmatter consistently uses `author: "John Townsend"`, so the least-surprising default for dynamic post authoring is the same literal default rather than identity-derived names or the current `'Guest'` fallback.
+- 2026-05-09T17:28:31.028+00:00: `components/Author/Author.tsx` is a hardcoded John Townsend bio card independent of post metadata; editable bylines can diverge from the footer card unless the team explicitly broadens scope to multi-author presentation.
 
 ## Team Session Update
 

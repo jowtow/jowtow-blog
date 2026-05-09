@@ -21,9 +21,12 @@ interface PostEditorProps {
   onCancel?: () => void;
 }
 
+const DEFAULT_POST_AUTHOR = "John Townsend";
+
 const emptyFormData = {
   title: "",
   slug: "",
+  author: DEFAULT_POST_AUTHOR,
   markdown: "",
   image: "",
 };
@@ -31,6 +34,7 @@ const emptyFormData = {
 const toFormData = (post: NonNullable<PostEditorProps["initialPost"]>) => ({
   title: post.title,
   slug: post.slug,
+  author: post.author?.trim() || DEFAULT_POST_AUTHOR,
   markdown: post.markdown,
   image: post.image || "",
 });
@@ -271,11 +275,7 @@ export default function PostEditor({
         body: JSON.stringify({
           ...formData,
           originalSlug: initialPost?.slug,
-          author:
-            initialPost?.author ||
-            user?.user_metadata?.full_name ||
-            user?.email ||
-            "Guest",
+          author: formData.author,
           date: initialPost?.date || new Date().toISOString().split("T")[0],
         }),
       });
@@ -396,7 +396,7 @@ export default function PostEditor({
         onSubmit={handleSubmit}
         className="space-y-6 rounded-2xl border border-[var(--color-secondary)]/35 bg-black/25 p-4 md:p-5"
       >
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
               Title <span className="text-red-500">*</span>
@@ -427,6 +427,23 @@ export default function PostEditor({
             />
             <p className="mt-1 text-sm text-[var(--text-light)]/60">
               Auto-generated from title, but you can customize it.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-secondary)]">
+              Author
+            </label>
+            <input
+              type="text"
+              name="author"
+              value={formData.author}
+              onChange={handleInputChange}
+              placeholder={DEFAULT_POST_AUTHOR}
+              className="w-full rounded-xl border border-[var(--color-secondary)]/40 bg-black/35 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
+            />
+            <p className="mt-1 text-sm text-[var(--text-light)]/60">
+              Controls the public byline only.
             </p>
           </div>
         </div>

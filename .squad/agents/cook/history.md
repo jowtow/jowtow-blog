@@ -52,3 +52,42 @@
 **Joey's deliverable:** Locked admin freshness regression suite in source tests covering three-part contract: loaders use no-store, mutable GET routes emit no-store headers, mutations wait for authoritative reload.
 
 **Result:** Eliminated all three caching layers causing admin stale data. Saved content now always appears immediately with live server data.
+
+### 2026-05-09: Author Field Analysis for Editability
+
+**Request:** Analyze backend/data implications of making author field editable with a default of "John Townsend".
+
+**Current Author Flow (Dynamic Posts):**
+- **Creation:** PostEditor.tsx (line 274-278) derives author from Netlify user metadata, email, or defaults to "Guest". This is passed to POST /api/posts.
+- **Storage:** app/api/posts/route.ts POST (line 49) stores author with fallback: `author: author || 'Guest'`. PUT (line 146) preserves existing author if not provided.
+- **Retrieval:** /api/posts GET lists all stored posts with author field intact. Admin page displays author next to post metadata.
+- **Rendering:** lib/posts.ts combines static and dynamic posts, mapping author from JSON into PostMetadata type. Published pages render via metadata.author.
+
+**Current Behavior Issues:**
+- Author is set at creation time and cannot be edited after—it's baked into the stored JSON.
+- No UI input for author in PostEditor (lines 399-547). Author is derived server-side from user context.
+- Existing posts have author already set (either from user metadata or "Guest" fallback).
+- On edit, author field is preserved unless explicitly overwritten by the API call.
+
+**Recommendations:**
+
+1. **Add author input field to PostEditor** — Add a text input between title/slug and cover image section. Default to "John Townsend" on create, preserve existing value on edit.
+
+2. **Update POST /api/posts** — Accept author from request body. Default to "John Townsend" if not provided (line 49).
+
+3. **Update PUT /api/posts** — Accept author from request body. Preserve existing author if not provided (line 146, already does this—just ensure it defaults to "John Townsend" if blank).
+
+4. **Update PostEditor form data** — Add author to formData state and toFormData() helper. Line 31-36 needs author field.
+
+5. **Update PostEditor submission** — Pass author from formData instead of deriving it (line 274-278).
+
+**Ambiguities & Edge Cases:**
+
+- **Existing Posts:** Current posts have author set to user metadata, email, or "Guest". Changing the default to "John Townsend" only affects *new* posts and edited posts that don't specify author. Should existing posts be migrated? Recommend no migration—let admins explicitly update if needed.
+- **Blank Author on Edit:** If user clears the author field and saves, should it fall back to "John Townsend"? Recommend yes—enforce "John Townsend" as the floor value.
+- **Static Posts:** Static posts use gray-matter frontmatter (author from YAML). They're read-only in the editor. No changes needed there.
+- **Admin Freshness:** Author field changes follow existing no-store cache policy. No new cache contract issues.
+
+**Files to Modify:**
+- components/PostEditor/PostEditor.tsx (add UI + formData)
+- app/api/posts/route.ts (update defaults)

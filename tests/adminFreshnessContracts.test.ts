@@ -55,7 +55,7 @@ test('post admin success callbacks await a fresh posts reload before leaving the
   assert.match(postEditor, /onDelete\?: \(deletedSlug: string\) => Promise<void> \| void;/);
   assert.match(
     postEditor,
-    /const authoritativePost = await onSuccess\?\.\(payload\.data\.slug\);[\s\S]*setSuccess\(true\);/s,
+    /const authoritativePost = await onSuccess\?\.\(payload\.data\.slug\);[\s\S]*if \(authoritativePost\) \{[\s\S]*setFormData\(toFormData\(authoritativePost\)\);[\s\S]*setSuccess\(true\);/s,
   );
   assert.match(postEditor, /setSuccess\(false\);\s*await onDelete\?\.\(initialPost\.slug\);/s);
   assert.match(

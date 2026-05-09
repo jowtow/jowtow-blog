@@ -3,6 +3,10 @@ import { revalidatePath } from 'next/cache';
 import { getStore } from '@netlify/blobs';
 import { verifyAdminAuth } from '@/lib/serverAuth';
 import { adminMutableJsonResponse } from '@/lib/adminApi';
+import {
+  DEFAULT_DYNAMIC_POST_AUTHOR,
+  normalizeDynamicPostAuthor,
+} from '@/lib/posts';
 
 function revalidatePostPaths(slugs: string[]) {
   revalidatePath('/');
@@ -46,7 +50,8 @@ export async function POST(request: NextRequest) {
       slug,
       markdown,
       image: image || '',
-      author: author || 'Guest',
+      author:
+        normalizeDynamicPostAuthor(author) ?? DEFAULT_DYNAMIC_POST_AUTHOR,
       date: date || new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
@@ -143,7 +148,10 @@ export async function PUT(request: NextRequest) {
       slug,
       markdown,
       image: image || '',
-      author: author || existingPost.author || 'Guest',
+      author:
+        normalizeDynamicPostAuthor(author) ??
+        normalizeDynamicPostAuthor(existingPost.author) ??
+        DEFAULT_DYNAMIC_POST_AUTHOR,
       date: date || existingPost.date || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

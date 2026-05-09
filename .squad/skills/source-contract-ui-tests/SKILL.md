@@ -36,3 +36,12 @@ When the repo does not have a browser or DOM component test harness, protect hig
   - mutable admin GET handlers emit `Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate`
   - mutation success paths `await` the authoritative reload before showing success or navigating away
 - This catches the common “save succeeded, but the screen still looks stale” regression even when the underlying bug lives in callback ordering rather than layout markup.
+
+## Editable metadata add-on
+
+- When an admin editor gains a user-editable metadata field without DOM coverage, pair source-contract assertions across the editor and the server boundary:
+  - editor defaults/reset state include the field
+  - `toFormData(...)` rehydrates the field from authoritative reload data
+  - the form renders a named input bound to state and includes the field in the JSON payload
+  - server normalization trims blanks and falls back to the agreed default
+- This is a cheap way to stop “field exists in UI but silently drops on save” regressions, especially for byline-style metadata such as dynamic post authors.
